@@ -31,6 +31,28 @@
 		BB3x3 = 'BB(3,3)'
 	}
 
+	enum VisualizationMode {
+		DEFAULT = 'default',
+		EXPLORE = 'explore',
+		BLAZE = 'blaze'
+	}
+
+	function isDefaultMode(mode: VisualizationMode) {
+		return mode === VisualizationMode.DEFAULT;
+	}
+
+	function isExploreMode(mode: VisualizationMode) {
+		return mode === VisualizationMode.EXPLORE;
+	}
+
+	function isBlazeMode(mode: VisualizationMode) {
+		return mode === VisualizationMode.BLAZE;
+	}
+
+	function showBlazeOption(machine: any) {
+		return machine !== null && machine.symbols === 2;
+	}
+
 	function challenge_to_state_string(challenge: Challenge) {
 		if (challenge == Challenge.BB5) {
 			return '5-state 2-symbol';
@@ -69,7 +91,7 @@
 	//machine = b64URLSafetoTM('mAQACAAAAAQEDAAAEAQAFAQEEAQACAAAFAQECAQED');
 	//console.log(machine);
 
-	let exploreMode = false;
+	let visualizationMode = VisualizationMode.DEFAULT;
 	let showHeadMove = true;
 
 	const nbIterDefault = 10000;
@@ -434,13 +456,13 @@
 		<div class="flex flex-col">
 			<div
 				class="flex flex-col mt-3"
-				class:md:flex-row={!exploreMode}
-				class:items-start={!exploreMode}
-				class:colors={exploreMode}
+				class:md:flex-row={isDefaultMode(visualizationMode)}
+				class:items-start={isDefaultMode(visualizationMode)}
+				class:colors={isExploreMode(visualizationMode) || isBlazeMode(visualizationMode)}
 			>
 				<div class="flex flex-col items-start">
 					<MachineCanvas
-						{exploreMode}
+						visualizationMode={visualizationMode}
 						{machine}
 						{initial_tape}
 						{tapeWidth}
@@ -536,15 +558,55 @@
 								</label>
 							{/if}
 						{/if}
-						<label class="text-sm mt-1 flex items-center space-x-2 cursor-pointer">
-							<input type="checkbox" bind:checked={exploreMode} />
-							<div>Explore mode</div>
-						</label>
+						{#if isDefaultMode(visualizationMode)}
+							<label class="text-sm mt-2 flex items-center space-x-2 cursor-pointer">
+								<input type="checkbox" bind:checked={showHeadMove} />
+								<div>Show head movement (green for L, red for R)</div>
+							</label>
+						{/if}
+						<div class="text-sm mt-1 flex flex-col space-y-2">
+							<div>Visualization mode:</div>
+							<div class="ml-2 space-y-1">
+								<label class="flex items-center space-x-2 cursor-pointer">
+									<input 
+										type="radio" 
+										bind:group={visualizationMode} 
+										value={VisualizationMode.DEFAULT} 
+									/>
+									<div>Default mode</div>
+								</label>
+								
+								<label class="flex items-center space-x-2 cursor-pointer">
+									<input 
+										type="radio" 
+										bind:group={visualizationMode} 
+										value={VisualizationMode.EXPLORE} 
+									/>
+									<div>Explore mode</div>
+								</label>
+								
+								{#if showBlazeOption(machine)}
+									<label class="flex items-center space-x-2 cursor-pointer">
+										<input 
+											type="radio" 
+											bind:group={visualizationMode} 
+											value={VisualizationMode.BLAZE} 
+										/>
+										<div>Blaze mode</div>
+									</label>
+								{/if}
+							</div>
+							{#if isBlazeMode(visualizationMode) && showBlazeOption(machine)}
+								<div class="text-xs mt-1 text-orange-400">
+									Blaze Mode: Optimized visualization for 2-symbol machines
+								</div>
+							{/if}
+						</div>
 					</div>
 				</div>
 
 				<div
-					class={!exploreMode
+					class={isDefaultMode(visualizationMode)
 						? 'mt-3 md:mt-0 md:ml-10 lg:ml-20 '
 						: 'flex w-full space-x-36 mb-5 mt-3'}
 				>
