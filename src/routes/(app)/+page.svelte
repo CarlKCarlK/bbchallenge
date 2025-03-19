@@ -485,7 +485,7 @@
 				class="flex flex-col mt-3"
 				class:md:flex-row={isDefaultMode(visualizationMode)}
 				class:items-start={isDefaultMode(visualizationMode)}
-				class:colors={isExploreMode(visualizationMode) || isBlazeMode(visualizationMode)}
+				class:colors={isExploreMode(visualizationMode)}
 			>
 				<div class="flex flex-col items-start">
 					<MachineCanvas
