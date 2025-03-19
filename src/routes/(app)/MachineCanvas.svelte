@@ -67,26 +67,33 @@
         
         drawRect(context);
         
-        // Choose visualization method based on mode
-        if (isExploreMode(visualizationMode)) {
-            drawCleanup = tm_explore(context, machine, initial_tape, nbIter);
-        } else if (isBlazeMode(visualizationMode)) {
-            // Initially, Blaze mode is a duplicate of Explore mode
-            // In the future, this can be customized with different behavior
-            drawCleanup = tm_explore(context, machine, initial_tape, nbIter);
-        } else {
-            // Default mode
-            tm_trace_to_image(
-                context,
-                machine,
-                initial_tape,
-                tapeWidth,
-                nbIter,
-                origin_x,
-                true,
-                showHeadMove
-            );
-        }
+		// Choose visualization method based on mode
+		switch (visualizationMode) {
+			case VisualizationMode.EXPLORE:
+			drawCleanup = tm_explore(context, machine, initial_tape, nbIter);
+			break;
+			
+			case VisualizationMode.BLAZE:
+			// Initially, Blaze mode is a duplicate of Explore mode
+			// In the future, this can be customized with different behavior
+			drawCleanup = tm_explore(context, machine, initial_tape, nbIter);
+			break;
+			
+			case VisualizationMode.DEFAULT:
+			default:
+			// Default mode
+			tm_trace_to_image(
+				context,
+				machine,
+				initial_tape,
+				tapeWidth,
+				nbIter,
+				origin_x,
+				true,
+				showHeadMove
+			);
+			break;
+		}
     }
     
     $: {
