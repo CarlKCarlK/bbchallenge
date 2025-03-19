@@ -551,12 +551,6 @@
 									<input bind:value={initial_tape} class="text-black" />
 								</label>
 							</div>
-							{#if !exploreMode}
-								<label class="text-sm mt-2 flex items-center space-x-2 cursor-pointer">
-									<input type="checkbox" bind:checked={showHeadMove} />
-									<div>Show head movement (green for L, red for R)</div>
-								</label>
-							{/if}
 						{/if}
 						{#if isDefaultMode(visualizationMode)}
 							<label class="text-sm mt-2 flex items-center space-x-2 cursor-pointer">
@@ -564,42 +558,35 @@
 								<div>Show head movement (green for L, red for R)</div>
 							</label>
 						{/if}
-						<div class="text-sm mt-1 flex flex-col space-y-2">
-							<div>Visualization mode:</div>
-							<div class="ml-2 space-y-1">
-								<label class="flex items-center space-x-2 cursor-pointer">
-									<input 
-										type="radio" 
-										bind:group={visualizationMode} 
-										value={VisualizationMode.DEFAULT} 
-									/>
-									<div>Default mode</div>
+						<div class="text-sm mt-2 flex items-center">
+							<span class="mr-2">Visualization:</span>
+							<div class="flex items-center border rounded-md">
+								<label class="px-2 py-1 cursor-pointer" 
+									class:bg-blue-600={isDefaultMode(visualizationMode)} 
+									class:text-white={isDefaultMode(visualizationMode)}>
+									<input type="radio" class="hidden" bind:group={visualizationMode} value={VisualizationMode.DEFAULT} />
+									Default
 								</label>
-								
-								<label class="flex items-center space-x-2 cursor-pointer">
-									<input 
-										type="radio" 
-										bind:group={visualizationMode} 
-										value={VisualizationMode.EXPLORE} 
-									/>
-									<div>Explore mode</div>
+								<div class="h-4 border-l border-gray-300"></div>
+								<label class="px-2 py-1 cursor-pointer"
+									class:bg-blue-600={isExploreMode(visualizationMode)}
+									class:text-white={isExploreMode(visualizationMode)}>
+									<input type="radio" class="hidden" bind:group={visualizationMode} value={VisualizationMode.EXPLORE} />
+									Explore
 								</label>
-								
-								{#if showBlazeOption(machine)}
-									<label class="flex items-center space-x-2 cursor-pointer">
-										<input 
-											type="radio" 
-											bind:group={visualizationMode} 
-											value={VisualizationMode.BLAZE} 
-										/>
-										<div>Blaze mode</div>
-									</label>
-								{/if}
+								<div class="h-4 border-l border-gray-300"></div>
+								<label class="px-2 py-1 cursor-pointer"
+									class:bg-blue-600={isBlazeMode(visualizationMode)}
+									class:text-white={isBlazeMode(visualizationMode)}
+									class:opacity-50={!showBlazeOption(machine)}
+									class:cursor-not-allowed={!showBlazeOption(machine)}>
+									<input type="radio" class="hidden" bind:group={visualizationMode} value={VisualizationMode.BLAZE}
+										disabled={!showBlazeOption(machine)} />
+									Blaze
+								</label>
 							</div>
 							{#if isBlazeMode(visualizationMode) && showBlazeOption(machine)}
-								<div class="text-xs mt-1 text-orange-400">
-									Blaze Mode: Optimized visualization for 2-symbol machines
-								</div>
+								<span class="ml-2 text-xs text-orange-400">(2-symbol)</span>
 							{/if}
 						</div>
 					</div>
