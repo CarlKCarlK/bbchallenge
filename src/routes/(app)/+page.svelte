@@ -325,6 +325,11 @@
 		// Update previousVisualizationMode *after* the check
 		previousVisualizationMode = visualizationMode;
 	}
+
+	// New reactive statement: when switching to Blaze mode, show simulation parameters.
+	$: if (visualizationMode === VisualizationMode.BLAZE) {
+		showSimulationParams = true;
+	}
 </script>
 
 {#key machineID || machineCode}
@@ -523,16 +528,16 @@
 										steps
 										<input
 											class="w-[70px] text-black"
-											class:w-[120px]={isBlazeMode(visualizationMode)}
+											class:w-[105px]={isBlazeMode(visualizationMode)}
 											type="number"
 											bind:value={nbIter}
 											on:change={() => {
 												window.history.pushState({}, '', getSimulationLink());
 											}}
 											min="1"
-											max={isBlazeMode(visualizationMode) ? "999999999999" : "99999"}
+											max={isBlazeMode(visualizationMode) ? "999999999" : "99999"}
 											on:blur={(e) => {
-												const maxSteps = isBlazeMode(visualizationMode) ? 999999999999 : 99999;
+												const maxSteps = isBlazeMode(visualizationMode) ? 999999999 : 99999;
 												nbIter = Math.max(1, Math.min(maxSteps, Math.round(nbIter || 0)));
 												e.currentTarget.value = nbIter.toString();
 											}}
