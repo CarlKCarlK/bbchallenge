@@ -1,3 +1,5 @@
+import init, { Machine, SpaceByTimeMachine } from './blaze/pkg/busy_beaver_blaze.js';
+
 export type TM = { states: number, symbols: number, code: Uint8Array };
 
 export const DB_SIZE = 88664064;
@@ -258,78 +260,60 @@ export function tm_explore(
 	return () => ctx.canvas.removeEventListener('wheel', wheel);
 }
 
-export function tm_blaze(
-	ctx: CanvasRenderingContext2D,
-	machine: TM,
-	initial_tape = '0',
-	height = 1000
+export async function tm_blaze(
+  ctx: CanvasRenderingContext2D,
+  machine: TM,
+  step_count = 1000
 ) {
-	const history = render_history(machine, initial_tape, height);
+  try {
+    // Initialize the WASM module
+    await init();
 
-	let zoom = 10;
-	let x_offset = ctx.canvas.width / 2;
-	let y_offset = 0;
+    // Convert the machine to a format suitable for WASM
+    const machineCode = tmToMachineCode(machine);
+    const binning = true;
 
-	const MAX_SCROLL_Y = 20;
+    // Create space-time machine with canvas dimensions
+    const spaceTimeMachine = new SpaceByTimeMachine(
+      machineCode, 
+      ctx.canvas.width, 
+      ctx.canvas.height, 
+      binning, 
+      0n
+    );
 
-	const render = () => {
-		const height = Math.ceil(ctx.canvas.height / zoom);
-		const width = Math.ceil(ctx.canvas.width / zoom);
-		const minx = Math.floor(-x_offset / zoom);
-		const miny = Math.floor(-y_offset / zoom);
-		const color_scale = 255 / (machine.symbols - 1);
+    // Calculate steps - we start on the 1st step and nth(0) means go forward one step
+    if (step_count > 1) {
+      spaceTimeMachine.nth(BigInt(step_count) - 2n);
+    }
 
-		for (let row = Math.max(miny, 0); row < Math.min(miny + height + 1, history.length); row++) {
-			if (!history[row]) continue;
-			const { tape, curr_pos, curr_state } = history[row];
+    // Get PNG data and create an object URL
+    const pngData = spaceTimeMachine.png_data();
+    const blobUrl = URL.createObjectURL(new Blob([pngData], { type: 'image/png' }));
 
-			for (let i = 0; i < tape.length; i += 1) {
-				const col = naturalToInt(i);
-				if (col < minx || col > minx + width) continue;
+    // Render the PNG data to the canvas
+    return new Promise<void>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.drawImage(image, 0, 0);
+        URL.revokeObjectURL(blobUrl); // Clean up the blob URL after use
+        resolve();
+      };
+      image.onerror = (error) => {
+        console.error("Error loading image:", error);
+        URL.revokeObjectURL(blobUrl);
+        reject(error);
+      };
+      image.src = blobUrl;
+    });
 
-				if (tape[i]) {
-					const color = Math.floor(color_scale * tape[i]);
-					ctx.fillStyle = `rgb(${color}, ${color}, ${color})`;
-					ctx.fillRect(col, row, 1, 1);
-				}
-			}
-
-			if (curr_state !== null && curr_state < colorList.length) {
-				ctx.fillStyle = `rgb(${colorList[curr_state].join(', ')})`;
-				ctx.fillRect(curr_pos, row, 1, 1);
-			}
-		}
-	};
-
-	const wheel = (e: WheelEvent) => {
-		e.preventDefault();
-
-		if (e.ctrlKey) {
-			const scale = Math.pow(1.1, -e.deltaY / 10);
-			x_offset = (x_offset - e.offsetX) * scale + e.offsetX;
-			y_offset = (y_offset - e.offsetY) * scale + e.offsetY;
-			zoom *= scale;
-		} else {
-			y_offset -= e.deltaY;
-			x_offset -= e.deltaX;
-		}
-		// Preventing user from scrolling too far up in y
-		y_offset = Math.min(y_offset, MAX_SCROLL_Y);
-
-		ctx.resetTransform();
-		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		ctx.setTransform(zoom, 0, 0, zoom, +x_offset, +y_offset);
-		render();
-	};
-	ctx.canvas.addEventListener('wheel', wheel, false);
-
-	ctx.resetTransform();
-	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-	ctx.setTransform(zoom, 0, 0, zoom, +x_offset, +y_offset);
-	render();
-
-	return () => ctx.canvas.removeEventListener('wheel', wheel);
+  } catch (error) {
+    console.error("Error in tm_blaze:", error);
+    throw error; // Re-throw to allow callers to handle the error
+  }
 }
+
 export function tm_trace_to_image(
 	ctx: CanvasRenderingContext2D,
 	machine: TM,

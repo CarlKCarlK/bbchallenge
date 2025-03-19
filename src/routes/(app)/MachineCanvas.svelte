@@ -51,7 +51,7 @@
     };
     
     let drawCleanup: (() => void) | undefined;
-    function draw(): void {
+    async function draw(): Promise<void> {
         if (drawCleanup) drawCleanup();
         
         // Update the width of the canvas based on visualization mode
@@ -74,9 +74,10 @@
 			break;
 			
 			case VisualizationMode.BLAZE:
-			// Initially, Blaze mode is a duplicate of Explore mode
-			// In the future, this can be customized with different behavior
-			drawCleanup = tm_blaze(context, machine, initial_tape, nbIter);
+			// Simple await solution for now
+			await tm_blaze(context, machine, nbIter).catch(error => {
+				console.error("Error in blaze visualization:", error);
+			});
 			break;
 			
 			case VisualizationMode.DEFAULT:
