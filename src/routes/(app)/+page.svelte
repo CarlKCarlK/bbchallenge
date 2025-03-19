@@ -526,23 +526,37 @@
 								<div class="flex space-x-3 text-sm">
 									<label class="flex flex-col">
 										steps
-										<input
-											class="w-[70px] text-black"
-											class:w-[105px]={isBlazeMode(visualizationMode)}
-											type="number"
-											bind:value={nbIter}
-											on:change={() => {
-												window.history.pushState({}, '', getSimulationLink());
-											}}
-											min="1"
-											max={isBlazeMode(visualizationMode) ? "999999999" : "99999"}
-											on:blur={(e) => {
-												const maxSteps = isBlazeMode(visualizationMode) ? 999999999 : 99999;
-												nbIter = Math.max(1, Math.min(maxSteps, Math.round(nbIter || 0)));
-												e.currentTarget.value = nbIter.toString();
-											}}
-										/></label
-									>
+										<div class="flex items-center">
+											<input
+												class="w-[70px] text-black"
+												class:w-[120px]={isBlazeMode(visualizationMode)}
+												type="number"
+												bind:value={nbIter}
+												on:change={() => {
+													window.history.pushState({}, '', getSimulationLink());
+												}}
+												min="1"
+												max={isBlazeMode(visualizationMode) ? "999999999" : "99999"}
+												on:blur={(e) => {
+													const maxSteps = isBlazeMode(visualizationMode) ? 999999999 : 99999;
+													nbIter = Math.max(1, Math.min(maxSteps, Math.round(nbIter || 0)));
+													e.currentTarget.value = nbIter.toString();
+												}}
+											/>
+											{#if isBlazeMode(visualizationMode)}
+												<button 
+													class="ml-1 bg-blue-500 text-xs px-1 py-0.5 rounded"
+													on:click={() => {
+														const maxSteps = 999999999;
+														nbIter = Math.min(maxSteps, nbIter * 10);
+														window.history.pushState({}, '', getSimulationLink());
+													}}
+												>
+													×10
+												</button>
+											{/if}
+										</div>
+									</label>
 									{#if !isBlazeMode(visualizationMode)}
 										<label class="flex flex-col">
 											tape width
