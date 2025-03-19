@@ -264,7 +264,8 @@ export async function tm_blaze(
   ctx: CanvasRenderingContext2D,
   machine: TM,
   step_count = 1000,
-  stretch = true
+  stretch = true,
+  quality = true
 ) {
   try {
     // Initialize the WASM module
@@ -272,7 +273,11 @@ export async function tm_blaze(
 
     // Convert the machine to a format suitable for WASM
     const machineCode = tmToMachineCode(machine);
-    const binning = true;
+    
+    // Set binning based on the quality parameter
+    // When quality is true, binning is true (better image quality)
+    // When quality is false, binning is false (faster rendering)
+    const binning = quality;
 
     // Create space-time machine with canvas dimensions
     const spaceTimeMachine = new SpaceByTimeMachine(

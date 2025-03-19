@@ -99,6 +99,9 @@
 
 	// Renamed from xStretch to stretch
 	let stretch = true;
+	
+	// New state for quality toggle in Blaze mode
+	let quality = true;
 
 	const nbIterDefault = 10000;
 	const tapeWidthDefault = 400;
@@ -495,6 +498,7 @@
 						{showHeadMove}
 						machineName={machineCode || machineID}
 						stretch={stretch}
+						quality={quality}
 					/>
 					<div class="text-xs pt-0 flex space-x-1 mt-2">
 						<!-- <div
@@ -577,6 +581,17 @@
 													on:click={() => stretch = !stretch}
 												>
 													stretch
+												</button>
+												<button 
+													class="ml-1 text-xs px-1 py-0.5 rounded"
+													class:bg-blue-600={quality}
+													class:text-white={quality}
+													class:border={!quality}
+													class:bg-gray-200={!quality}
+													class:text-gray-800={!quality}
+													on:click={() => quality = !quality}
+												>
+													{quality ? 'quality' : 'speed'}
 												</button>
 											{/if}
 										</div>

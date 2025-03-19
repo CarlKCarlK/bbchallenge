@@ -22,6 +22,9 @@
     // Renamed from xStretch to stretch
     export let stretch: boolean = true;
     
+    // New quality parameter for binning control in Blaze mode
+    export let quality: boolean = true;
+    
     // Helper functions to simplify conditional checks with proper types
     function isDefaultMode(mode: VisualizationMode): boolean {
         return mode === VisualizationMode.DEFAULT;
@@ -77,8 +80,8 @@
 			break;
 			
 			case VisualizationMode.BLAZE:
-				// Pass stretch parameter to tm_blaze (renamed from xStretch)
-				await tm_blaze(context, machine, nbIter, stretch).catch(error => {
+				// Pass stretch and quality parameters to tm_blaze
+				await tm_blaze(context, machine, nbIter, stretch, quality).catch(error => {
 					console.error("Error in blaze visualization:", error);
 				});
 				break;
@@ -110,6 +113,7 @@
         origin_x;
         showHeadMove;
         stretch; // Renamed from xStretch
+        quality; // Add new dependency
         
         if (canvas) {
             draw();
