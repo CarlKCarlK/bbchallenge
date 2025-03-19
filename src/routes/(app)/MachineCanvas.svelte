@@ -32,6 +32,16 @@
         return mode === VisualizationMode.BLAZE;
     }
     
+    // Helper function to check if a parameter should be shown based on visualization mode
+    export function shouldShowParameter(mode: VisualizationMode, paramName: string): boolean {
+        if (isBlazeMode(mode)) {
+            // Blaze mode only shows steps parameter
+            return paramName === 'nbIter';
+        }
+        // Default and Explore modes show all parameters
+        return true;
+    }
+    
     let canvas: HTMLCanvasElement;
     
     const drawRect = (context: CanvasRenderingContext2D): void => {

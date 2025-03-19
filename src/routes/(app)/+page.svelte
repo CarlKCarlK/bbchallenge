@@ -507,49 +507,60 @@
 										steps
 										<input
 											class="w-[70px] text-black"
+											class:w-[120px]={isBlazeMode(visualizationMode)}
 											type="number"
 											bind:value={nbIter}
 											on:change={() => {
 												window.history.pushState({}, '', getSimulationLink());
 											}}
 											min="1"
-											max="99999"
+											max={isBlazeMode(visualizationMode) ? "999999999999" : "99999"}
 											on:blur={(e) => {
-												nbIter = Math.max(1, Math.min(99999, Math.round(nbIter || 0)));
+												const maxSteps = isBlazeMode(visualizationMode) ? 999999999999 : 99999;
+												nbIter = Math.max(1, Math.min(maxSteps, Math.round(nbIter || 0)));
 												e.currentTarget.value = nbIter.toString();
 											}}
 										/></label
 									>
-									<label class="flex flex-col">
-										tape width
-										<input
-											class="w-[70px] text-black"
-											type="number"
-											bind:value={tapeWidth}
-											on:change={() => {
-												window.history.pushState({}, '', getSimulationLink());
-											}}
-										/></label
-									>
-									<label class="flex flex-col">
-										x-translation
-										<input
-											class="w-[70px] text-black"
-											type="number"
-											bind:value={origin_x}
-											on:change={() => {
-												window.history.pushState({}, '', getSimulationLink());
-											}}
-											min="0"
-											max="1"
-											step="0.1"
-										/></label
-									>
+									{#if !isBlazeMode(visualizationMode)}
+										<label class="flex flex-col">
+											tape width
+											<input
+												class="w-[70px] text-black"
+												type="number"
+												bind:value={tapeWidth}
+												on:change={() => {
+													window.history.pushState({}, '', getSimulationLink());
+												}}
+											/></label
+										>
+										<label class="flex flex-col">
+											x-translation
+											<input
+												class="w-[70px] text-black"
+												type="number"
+												bind:value={origin_x}
+												on:change={() => {
+													window.history.pushState({}, '', getSimulationLink());
+												}}
+												min="0"
+												max="1"
+												step="0.1"
+											/></label
+										>
+									{/if}
 								</div>
-								<label class="text-sm mt-2 flex flex-col space-y-1 cursor-pointer">
-									<div>initial tape content</div>
-									<input bind:value={initial_tape} class="text-black" />
-								</label>
+								{#if isBlazeMode(visualizationMode) && showBlazeOption(machine)}
+									<div class="text-xs text-orange-400 mt-1">
+										Blaze mode allows up to one trillion steps
+									</div>
+								{/if}
+								{#if !isBlazeMode(visualizationMode)}
+									<label class="text-sm mt-2 flex flex-col space-y-1 cursor-pointer">
+										<div>initial tape content</div>
+										<input bind:value={initial_tape} class="text-black" />
+									</label>
+								{/if}
 							</div>
 						{/if}
 						{#if isDefaultMode(visualizationMode)}
