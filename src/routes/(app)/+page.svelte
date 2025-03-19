@@ -97,6 +97,9 @@
 	let previousVisualizationMode: VisualizationMode | null = null;
 	let showHeadMove = true;
 
+	// Renamed from xStretch to stretch
+	let stretch = true;
+
 	const nbIterDefault = 10000;
 	const tapeWidthDefault = 400;
 	const origin_xDefault = 0.5;
@@ -491,6 +494,7 @@
 						{origin_x}
 						{showHeadMove}
 						machineName={machineCode || machineID}
+						stretch={stretch}
 					/>
 					<div class="text-xs pt-0 flex space-x-1 mt-2">
 						<!-- <div
@@ -529,7 +533,7 @@
 										<div class="flex items-center">
 											<input
 												class="w-[70px] text-black"
-												class:w-[120px]={isBlazeMode(visualizationMode)}
+												class:w-[105px]={isBlazeMode(visualizationMode)}
 												type="number"
 												bind:value={nbIter}
 												on:change={() => {
@@ -545,7 +549,7 @@
 											/>
 											{#if isBlazeMode(visualizationMode)}
 												<button 
-													class="ml-1 bg-blue-500 text-xs px-1 py-0.5 rounded"
+													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded"
 													on:click={() => {
 														const maxSteps = 999999999;
 														nbIter = Math.min(maxSteps, nbIter * 10);
@@ -553,6 +557,17 @@
 													}}
 												>
 													×10
+												</button>
+												<button 
+													class="ml-1 text-xs px-1 py-0.5 rounded"
+													class:bg-blue-600={stretch}
+													class:text-white={stretch}
+													class:border={!stretch}
+													class:bg-gray-200={!stretch}
+													class:text-gray-800={!stretch}
+													on:click={() => stretch = !stretch}
+												>
+													stretch
 												</button>
 											{/if}
 										</div>

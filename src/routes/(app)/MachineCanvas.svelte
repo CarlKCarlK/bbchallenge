@@ -19,6 +19,9 @@
     
     export let machineName: string;
     
+    // Renamed from xStretch to stretch
+    export let stretch: boolean = true;
+    
     // Helper functions to simplify conditional checks with proper types
     function isDefaultMode(mode: VisualizationMode): boolean {
         return mode === VisualizationMode.DEFAULT;
@@ -74,11 +77,11 @@
 			break;
 			
 			case VisualizationMode.BLAZE:
-			// Simple await solution for now
-			await tm_blaze(context, machine, nbIter).catch(error => {
-				console.error("Error in blaze visualization:", error);
-			});
-			break;
+				// Pass stretch parameter to tm_blaze (renamed from xStretch)
+				await tm_blaze(context, machine, nbIter, stretch).catch(error => {
+					console.error("Error in blaze visualization:", error);
+				});
+				break;
 			
 			case VisualizationMode.DEFAULT:
 			default:
@@ -106,6 +109,7 @@
         nbIter;
         origin_x;
         showHeadMove;
+        stretch; // Renamed from xStretch
         
         if (canvas) {
             draw();

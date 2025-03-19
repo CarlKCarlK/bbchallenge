@@ -263,7 +263,8 @@ export function tm_explore(
 export async function tm_blaze(
   ctx: CanvasRenderingContext2D,
   machine: TM,
-  step_count = 1000
+  step_count = 1000,
+  stretch = true
 ) {
   try {
     // Initialize the WASM module
@@ -291,7 +292,7 @@ export async function tm_blaze(
     const pngData = spaceTimeMachine.png_data();
     const blobUrl = URL.createObjectURL(new Blob([pngData], { type: 'image/png' }));
 
-	// Render the PNG data to the canvas and stretch to fit
+	// Render the PNG data to the canvas with or without stretching
 	const renderImage = () => {
 	  return new Promise<void>((resolve, reject) => {
 		const image = new Image();
@@ -299,8 +300,18 @@ export async function tm_blaze(
 		  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		  // Set pixelated rendering mode to prevent blurring when scaling
 		  ctx.imageSmoothingEnabled = false;
-		  // Draw the image stretched to fit the canvas dimensions
-		  ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
+		  
+		  if (stretch) {
+			// Draw the image stretched to fit the canvas dimensions
+			ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
+		  } else {
+			// Draw the image at its original aspect ratio, centered
+			const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
+			const x = (ctx.canvas.width - image.width * scale) / 2;
+			const y = (ctx.canvas.height - image.height * scale) / 2;
+			ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
+		  }
+		  
 		  URL.revokeObjectURL(blobUrl); // Clean up the blob URL after use
 		  resolve();
 		};
