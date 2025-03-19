@@ -559,6 +559,15 @@
 													×10
 												</button>
 												<button 
+													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded"
+													on:click={() => {
+														nbIter = Math.max(1, Math.floor(nbIter / 10));
+														window.history.pushState({}, '', getSimulationLink());
+													}}
+												>
+													÷10
+												</button>
+												<button 
 													class="ml-1 text-xs px-1 py-0.5 rounded"
 													class:bg-blue-600={stretch}
 													class:text-white={stretch}
