@@ -624,11 +624,6 @@
 										>
 									{/if}
 								</div>
-								{#if isBlazeMode(visualizationMode) && showBlazeOption(machine)}
-									<div class="text-xs text-orange-400 mt-1">
-										Blaze mode allows up to one trillion steps
-									</div>
-								{/if}
 								{#if !isBlazeMode(visualizationMode)}
 									<label class="text-sm mt-2 flex flex-col space-y-1 cursor-pointer">
 										<div>initial tape content</div>
@@ -670,9 +665,6 @@
 									Blaze
 								</label>
 							</div>
-							{#if isBlazeMode(visualizationMode) && showBlazeOption(machine)}
-								<span class="ml-2 text-xs text-orange-400">(2-symbol)</span>
-							{/if}
 						</div>
 					</div>
 				</div>
