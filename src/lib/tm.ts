@@ -291,22 +291,29 @@ export async function tm_blaze(
     const pngData = spaceTimeMachine.png_data();
     const blobUrl = URL.createObjectURL(new Blob([pngData], { type: 'image/png' }));
 
-    // Render the PNG data to the canvas
-    return new Promise<void>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.drawImage(image, 0, 0);
-        URL.revokeObjectURL(blobUrl); // Clean up the blob URL after use
-        resolve();
-      };
-      image.onerror = (error) => {
-        console.error("Error loading image:", error);
-        URL.revokeObjectURL(blobUrl);
-        reject(error);
-      };
-      image.src = blobUrl;
-    });
+	// Render the PNG data to the canvas and stretch to fit
+	const renderImage = () => {
+	  return new Promise<void>((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => {
+		  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+		  // Set pixelated rendering mode to prevent blurring when scaling
+		  ctx.imageSmoothingEnabled = false;
+		  // Draw the image stretched to fit the canvas dimensions
+		  ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
+		  URL.revokeObjectURL(blobUrl); // Clean up the blob URL after use
+		  resolve();
+		};
+		image.onerror = (error) => {
+		  console.error("Error loading image:", error);
+		  URL.revokeObjectURL(blobUrl);
+		  reject(error);
+		};
+		image.src = blobUrl;
+	  });
+	};
+
+	return renderImage();
 
   } catch (error) {
     console.error("Error in tm_blaze:", error);
