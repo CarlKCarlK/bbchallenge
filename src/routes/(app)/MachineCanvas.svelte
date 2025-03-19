@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tm_trace_to_image, tm_explore } from '$lib/tm';
+    import { tm_trace_to_image, tm_explore, tm_blaze } from '$lib/tm';
     
     // Define our VisualizationMode enum with proper TypeScript typing
     enum VisualizationMode {
@@ -76,7 +76,7 @@
 			case VisualizationMode.BLAZE:
 			// Initially, Blaze mode is a duplicate of Explore mode
 			// In the future, this can be customized with different behavior
-			drawCleanup = tm_explore(context, machine, initial_tape, nbIter);
+			drawCleanup = tm_blaze(context, machine, initial_tape, nbIter);
 			break;
 			
 			case VisualizationMode.DEFAULT:

@@ -8,6 +8,7 @@
 		TMDecisionStatus,
 		tm_trace_to_image,
 		tm_explore,
+		tm_blaze,
 		tmToMachineCode,
 		machineCodeToTM,
 		DB_SIZE,
