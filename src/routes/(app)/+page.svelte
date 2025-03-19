@@ -93,6 +93,8 @@
 	//console.log(machine);
 
 	let visualizationMode = VisualizationMode.DEFAULT;
+	// Initialize previousVisualizationMode to null
+	let previousVisualizationMode: VisualizationMode | null = null;
 	let showHeadMove = true;
 
 	const nbIterDefault = 10000;
@@ -310,6 +312,19 @@
 	}
 
 	let serverDown = false;
+
+	// Reactive statement to detect transition from Blaze to non-Blaze mode.
+	$: {
+		if (previousVisualizationMode === VisualizationMode.BLAZE && visualizationMode !== VisualizationMode.BLAZE) {
+			if (nbIter > 10000) {
+				nbIter = 10000;
+				window.history.pushState({}, '', getSimulationLink());
+				console.log("Switched from Blaze: nbIter limited to 10,000");
+			}
+		}
+		// Update previousVisualizationMode *after* the check
+		previousVisualizationMode = visualizationMode;
+	}
 </script>
 
 {#key machineID || machineCode}
