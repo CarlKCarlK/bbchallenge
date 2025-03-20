@@ -261,80 +261,86 @@ export function tm_explore(
 }
 
 export async function tm_blaze(
-  ctx: CanvasRenderingContext2D,
-  machine: TM,
-  step_count = 1000,
-  stretch = true,
-  quality = true
+	ctx: CanvasRenderingContext2D,
+	machine: TM,
+	step_count = 1000,
+	stretch = true,
+	quality = true
 ) {
-  try {
-    // Initialize the WASM module
-    await init();
+	try {
+		// Convert the machine to a format suitable for WASM
+		const machineCode = tmToMachineCode(machine);
 
-    // Convert the machine to a format suitable for WASM
-    const machineCode = tmToMachineCode(machine);
-    
-    // Set binning based on the quality parameter
-    // When quality is true, binning is true (better image quality)
-    // When quality is false, binning is false (faster rendering)
-    const binning = quality;
+		// Set binning based on the quality parameter
+		const binning = quality;
 
-    // Create space-time machine with canvas dimensions
-    const spaceTimeMachine = new SpaceByTimeMachine(
-      machineCode, 
-      ctx.canvas.width, 
-      ctx.canvas.height, 
-      binning, 
-      0n
-    );
+		// Create a worker using the tm-worker.js file
+		const worker = new Worker(new URL('./tm-worker.js', import.meta.url), { type: 'module' });
 
-    // Calculate steps - we start on the 1st step and nth(0) means go forward one step
-    if (step_count > 1) {
-      spaceTimeMachine.nth(BigInt(step_count) - 2n);
-    }
+		// Send data to the worker
+		const promise = new Promise<ArrayBuffer>((resolve, reject) => {
+			worker.onmessage = (event) => {
+				if (event.data.error) {
+					reject(new Error(event.data.error));
+				} else {
+					resolve(event.data);
+				}
+				worker.terminate();
+			};
+			worker.onerror = (error) => {
+				reject(error);
+				worker.terminate();
+			};
+		});
 
-    // Get PNG data and create an object URL
-    const pngData = spaceTimeMachine.png_data();
-    const blobUrl = URL.createObjectURL(new Blob([pngData], { type: 'image/png' }));
+		worker.postMessage({
+			machineCode,
+			canvasWidth: ctx.canvas.width,
+			canvasHeight: ctx.canvas.height,
+			binning,
+			stepCount: step_count
+		});
 
-	// Render the PNG data to the canvas with or without stretching
-	const renderImage = () => {
-	  return new Promise<void>((resolve, reject) => {
-		const image = new Image();
-		image.onload = () => {
-		  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		  // Set pixelated rendering mode to prevent blurring when scaling
-		  ctx.imageSmoothingEnabled = false;
-		  
-		  if (stretch) {
-			// Draw the image stretched to fit the canvas dimensions
-			ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
-		  } else {
-			// Draw the image at its original aspect ratio, centered
-			const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
-			const x = (ctx.canvas.width - image.width * scale) / 2;
-			const y = (ctx.canvas.height - image.height * scale) / 2;
-			ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
-		  }
-		  
-		  URL.revokeObjectURL(blobUrl); // Clean up the blob URL after use
-		  resolve();
+		// Wait for the worker to finish
+		const pngData = await promise;
+
+		// Create an object URL for the PNG data
+		const blobUrl = URL.createObjectURL(new Blob([pngData], { type: 'image/png' }));
+
+		// Render the PNG data to the canvas with or without stretching
+		const renderImage = () => {
+			return new Promise<void>((resolve, reject) => {
+				const image = new Image();
+				image.onload = () => {
+					ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+					ctx.imageSmoothingEnabled = false;
+
+					if (stretch) {
+						ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
+					} else {
+						const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
+						const x = (ctx.canvas.width - image.width * scale) / 2;
+						const y = (ctx.canvas.height - image.height * scale) / 2;
+						ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
+					}
+
+					URL.revokeObjectURL(blobUrl);
+					resolve();
+				};
+				image.onerror = (error) => {
+					console.error("Error loading image:", error);
+					URL.revokeObjectURL(blobUrl);
+					reject(error);
+				};
+				image.src = blobUrl;
+			});
 		};
-		image.onerror = (error) => {
-		  console.error("Error loading image:", error);
-		  URL.revokeObjectURL(blobUrl);
-		  reject(error);
-		};
-		image.src = blobUrl;
-	  });
-	};
 
-	return renderImage();
-
-  } catch (error) {
-    console.error("Error in tm_blaze:", error);
-    throw error; // Re-throw to allow callers to handle the error
-  }
+		return renderImage();
+	} catch (error) {
+		console.error("Error in tm_blaze:", error);
+		throw error;
+	}
 }
 
 export function tm_trace_to_image(
