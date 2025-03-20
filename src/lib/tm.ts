@@ -1,5 +1,3 @@
-import init, { Machine, SpaceByTimeMachine } from './blaze/pkg/busy_beaver_blaze.js';
-
 export type TM = { states: number, symbols: number, code: Uint8Array };
 
 export const DB_SIZE = 88664064;
