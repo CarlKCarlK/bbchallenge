@@ -605,8 +605,7 @@
 										steps
 										<div class="flex items-center">
 											<input
-												class="w-[70px] text-black"
-												class:w-[150px]={isBlazeMode(visualizationMode)}
+												class={isBlazeMode(visualizationMode) ? 'w-[150px] text-black' : 'w-[70px] text-black'}
 												type="number"
 												bind:value={nbIter}
 												on:change={(e) => {

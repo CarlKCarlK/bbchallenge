@@ -35,8 +35,8 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
                 BigInt(stepCount), // Convert stepCount to BigInt
                 10_000n // Already a BigInt
             )) break;
-            const pngData = spaceTimeMachine.png_data();
-			self.postMessage(pngData, [pngData.buffer]);    
+            // const pngData = spaceTimeMachine.png_data();
+			// self.postMessage(pngData, [pngData.buffer]);    
 		}
 
 
