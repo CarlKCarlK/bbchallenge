@@ -336,6 +336,12 @@
 	$: if (visualizationMode === VisualizationMode.BLAZE) {
 		showSimulationParams = true;
 	}
+
+	// New reactive statement: auto-switch from Blaze to Default mode for machines with more than 2 symbols
+	$: if (machine !== null && visualizationMode === VisualizationMode.BLAZE && machine.symbols > 2) {
+		visualizationMode = VisualizationMode.DEFAULT;
+		console.log("Auto-switched from Blaze to Default mode: machine has more than 2 symbols");
+	}
 </script>
 
 {#key machineID || machineCode}
