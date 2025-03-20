@@ -1,12 +1,10 @@
-import init, { SpaceByTimeMachine } from './blaze/pkg/busy_beaver_blaze.js';
-
-let initPromise: Promise<void> | null = null;
+import init, { SpaceByTimeMachine } from './blaze/pkg/busy_beaver_blaze';
 
 interface WorkerMessage {
 	machineCode: string;
 	canvasWidth: number;
 	canvasHeight: number;
-	binning: number;
+	binning: boolean;
 	stepCount: number;
 }
 
@@ -14,11 +12,8 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 	const { machineCode, canvasWidth, canvasHeight, binning, stepCount } = event.data;
 
 	try {
-		// Initialize the WASM module once
-		if (!initPromise) {
-			initPromise = init();
-			await initPromise;
-		}
+		// Initialize the WASM module
+        await init();
 
 		// Create the SpaceByTimeMachine instance
 		const spaceTimeMachine = new SpaceByTimeMachine(
@@ -35,10 +30,15 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 		}
 
 		// Get the PNG data and send it back to the main thread
-		const pngData: Uint8Array = spaceTimeMachine.png_data();
-		self.postMessage(pngData, [pngData.buffer]);
-	} catch (error: any) {
-		// Send any errors back to the main thread
-		self.postMessage({ error: error.message });
-	}
+        const pngData = spaceTimeMachine.png_data();
+        self.postMessage({ type: 'image', data: pngData }, [pngData.buffer]); // Send the buffer with metadata
+    } catch (error: unknown) {
+        console.error("Worker error:", error); // Log the error for debugging
+        // Send any errors back to the main thread
+        if (error instanceof Error) {
+            self.postMessage({ error: error.message });
+        } else {
+            self.postMessage({ error: 'Unknown error occurred' });
+        }
+    }
 };
