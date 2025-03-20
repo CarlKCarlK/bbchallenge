@@ -13,7 +13,7 @@
     export let machine: any;
     export let initial_tape: string;
     export let tapeWidth: number;
-    export let nbIter: number;
+    export let nbIter: bigint;
     export let origin_x: number;
     export let showHeadMove: boolean;
     
@@ -76,7 +76,8 @@
 		// Choose visualization method based on mode
 		switch (visualizationMode) {
 			case VisualizationMode.EXPLORE:
-			drawCleanup = tm_explore(context, machine, initial_tape, nbIter);
+            const height_explore = Number(nbIter > 99999n ? 99999n : nbIter);
+			drawCleanup = tm_explore(context, machine, initial_tape, height_explore);
 			break;
 			
 			case VisualizationMode.BLAZE:
@@ -89,12 +90,13 @@
 			case VisualizationMode.DEFAULT:
 			default:
 			// Default mode
+            const height_default = Number(nbIter > 99999n ? 99999n : nbIter);
 			tm_trace_to_image(
 				context,
 				machine,
 				initial_tape,
 				tapeWidth,
-				nbIter,
+				height_default,
 				origin_x,
 				true,
 				showHeadMove

@@ -103,10 +103,10 @@
 	// New state for quality toggle in Blaze mode
 	let quality = true;
 
-	const nbIterDefault = 10000;
+	const nbIterDefault = 10000n;
 	const tapeWidthDefault = 400;
 	const origin_xDefault = 0.5;
-	export let nbIter = nbIterDefault;
+	export let nbIter: bigint = nbIterDefault;
 	export let tapeWidth = tapeWidthDefault;
 	export let origin_x = origin_xDefault;
 
@@ -386,7 +386,7 @@
 	$: {
 		if (previousVisualizationMode === VisualizationMode.BLAZE && visualizationMode !== VisualizationMode.BLAZE) {
 			if (nbIter > 10000) {
-				nbIter = 10000;
+				nbIter = 10000n;
 				window.history.pushState({}, '', getSimulationLink());
 				console.log("Switched from Blaze: nbIter limited to 10,000");
 			}
@@ -604,12 +604,14 @@
 									<label class="flex flex-col">
 										steps
 										<div class="flex items-center">
+											<!-- svelte-ignore missing-declaration -->
 											<input
 												class="w-[70px] text-black"
-												class:w-[105px]={isBlazeMode(visualizationMode)}
+												class:w-[150px]={isBlazeMode(visualizationMode)}
 												type="number"
 												bind:value={nbIter}
-												on:change={() => {
+												on:change={(e) => {
+													nbIter = BigInt(e.currentTarget.value); // Convert input value to bigint
 													const url = new URL(window.location.href);
 													const hasBlaze = url.searchParams.has('blaze');
 													window.history.pushState({}, '', getSimulationLink());
@@ -618,11 +620,12 @@
 														window.history.replaceState({}, '', url.pathname + url.search);
 													}
 												}}
-												min="1"
-												max={isBlazeMode(visualizationMode) ? "999999999" : "99999"}
 												on:blur={(e) => {
-													const maxSteps = isBlazeMode(visualizationMode) ? 999999999 : 99999;
-													nbIter = Math.max(1, Math.min(maxSteps, Math.round(nbIter || 0)));
+													if (!isBlazeMode(visualizationMode))
+														{
+															if (isNaN(Number(nbIter)) || nbIter <= 0n) nbIter = 1n;
+															if (nbIter > 99999n) nbIter = 99999n;
+														}
 													e.currentTarget.value = nbIter.toString();
 												}}
 											/>
@@ -630,8 +633,7 @@
 												<button 
 													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded"
 													on:click={() => {
-														const maxSteps = 999999999;
-														nbIter = Math.min(maxSteps, nbIter * 10);
+														nbIter =  nbIter * 10n;
 														window.history.pushState({}, '', getSimulationLink());
 													}}
 												>
@@ -640,7 +642,7 @@
 												<button 
 													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded"
 													on:click={() => {
-														nbIter = Math.max(1, Math.floor(nbIter / 10));
+														nbIter = (nbIter > 10n) ? nbIter / 10n : 1n;
 														window.history.pushState({}, '', getSimulationLink());
 													}}
 												>
