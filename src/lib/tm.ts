@@ -1,5 +1,3 @@
-import init, { Machine, SpaceByTimeMachine } from './blaze/pkg/busy_beaver_blaze.js';
-
 export type TM = { states: number, symbols: number, code: Uint8Array };
 
 export const DB_SIZE = 88664064;
@@ -274,20 +272,28 @@ export async function tm_blaze(
 		// Set binning based on the quality parameter
 		const binning = quality;
 
-		// Create a worker using the tm-worker.js file
-		const worker = new Worker(new URL('./tm-worker.js', import.meta.url), { type: 'module' });
+		// Create a worker using the tm-worker.ts file
+		let worker: Worker;
+		try {
+			worker = new Worker(new URL('./tm-worker.ts', import.meta.url), { type: 'module' });
+		} catch (error) {
+			console.error("Failed to create worker. Ensure the worker file path is correct.", error);
+			throw error;
+		}
 
 		// Send data to the worker
 		const promise = new Promise<ArrayBuffer>((resolve, reject) => {
 			worker.onmessage = (event) => {
 				if (event.data.error) {
+					console.error("Worker error message:", event.data.error); // Log worker error
 					reject(new Error(event.data.error));
-				} else {
-					resolve(event.data);
+				} else if (event.data.type === 'image') {
+					resolve(event.data.data); // Resolve with the PNG data
 				}
 				worker.terminate();
 			};
 			worker.onerror = (error) => {
+				console.error("Worker initialization error:", error); // Log worker initialization error
 				reject(error);
 				worker.terminate();
 			};
@@ -328,7 +334,7 @@ export async function tm_blaze(
 					resolve();
 				};
 				image.onerror = (error) => {
-					console.error("Error loading image:", error);
+					console.error("Error loading image:", error); // Log image loading error
 					URL.revokeObjectURL(blobUrl);
 					reject(error);
 				};
@@ -338,7 +344,7 @@ export async function tm_blaze(
 
 		return renderImage();
 	} catch (error) {
-		console.error("Error in tm_blaze:", error);
+		console.error("Error in tm_blaze:", error); // Log the error for debugging
 		throw error;
 	}
 }
