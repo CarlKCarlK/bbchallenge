@@ -1,8 +1,16 @@
 import init, { SpaceByTimeMachine } from './blaze/pkg/busy_beaver_blaze.js';
 
-let initPromise = null;
+let initPromise: Promise<void> | null = null;
 
-self.onmessage = async (event) => {
+interface WorkerMessage {
+	machineCode: string;
+	canvasWidth: number;
+	canvasHeight: number;
+	binning: number;
+	stepCount: number;
+}
+
+self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 	const { machineCode, canvasWidth, canvasHeight, binning, stepCount } = event.data;
 
 	try {
@@ -27,9 +35,9 @@ self.onmessage = async (event) => {
 		}
 
 		// Get the PNG data and send it back to the main thread
-		const pngData = spaceTimeMachine.png_data();
+		const pngData: Uint8Array = spaceTimeMachine.png_data();
 		self.postMessage(pngData, [pngData.buffer]);
-	} catch (error) {
+	} catch (error: any) {
 		// Send any errors back to the main thread
 		self.postMessage({ error: error.message });
 	}

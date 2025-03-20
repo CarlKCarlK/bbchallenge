@@ -274,8 +274,8 @@ export async function tm_blaze(
 		// Set binning based on the quality parameter
 		const binning = quality;
 
-		// Create a worker using the tm-worker.js file
-		const worker = new Worker(new URL('./tm-worker.js', import.meta.url), { type: 'module' });
+		// Create a worker using the tm-worker.ts file
+		const worker = new Worker(new URL('./tm-worker.ts', import.meta.url), { type: 'module' });
 
 		// Send data to the worker
 		const promise = new Promise<ArrayBuffer>((resolve, reject) => {
