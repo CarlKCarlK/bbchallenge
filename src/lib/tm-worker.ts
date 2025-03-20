@@ -8,6 +8,13 @@ interface WorkerMessage {
 	stepCount: number;
 }
 
+interface WorkerResponse {
+    type: 'result' | 'error'; // Message type
+	intermediate: boolean;     // Is this an intermediate result?s
+    pngData?: Uint8Array;     // Optional PNG data (only for 'result')
+    message?: string;         // Optional error message (only for 'error')
+}
+
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 	const { machineCode, canvasWidth, canvasHeight, binning, stepCount } = event.data;
 	const run_for_seconds = 0.1;
@@ -23,7 +30,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 			canvasHeight,
 			binning,
 			0n
-		);
+			);
 
 		// if (stepCount > 1) {
 		// 	spaceTimeMachine.nth(BigInt(stepCount) - 2n);
@@ -41,10 +48,19 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
 
 		// Get the PNG data and send it back to the main thread
-		const pngData: Uint8Array = spaceTimeMachine.png_data();
-		self.postMessage(pngData, [pngData.buffer]);
+		const response: WorkerResponse = {
+			type: 'result',
+			intermediate: false,
+			pngData: spaceTimeMachine.png_data()
+		};
+		self.postMessage(response, [response.pngData!.buffer]);
 	} catch (error: any) {
 		// Send any errors back to the main thread
-		self.postMessage({ error: error.message });
+		const response: WorkerResponse = {
+			type: 'error',
+			intermediate: false,
+			message: error.message
+		};
+		self.postMessage(response);
 	}
 };
