@@ -261,7 +261,7 @@ export function tm_explore(
 export async function tm_blaze(
 	ctx: CanvasRenderingContext2D,
 	machine: TM,
-	step_count = 1000,
+	step_count = 1000n,
 	stretch = true,
 	quality = true
 ) {
