@@ -258,6 +258,48 @@ export function tm_explore(
 	return () => ctx.canvas.removeEventListener('wheel', wheel);
 }
 
+// Helper function to render PNG data to canvas
+function renderPngDataToCanvas(
+    ctx: CanvasRenderingContext2D,
+    pngData: ArrayBuffer,
+    stretch: boolean,
+    onComplete?: () => void
+): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        // Create an object URL for the PNG data
+        const blobUrl = URL.createObjectURL(new Blob([pngData], { type: 'image/png' }));
+        
+        // Create an image and render it to the canvas
+        const image = new Image();
+        image.onload = () => {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.imageSmoothingEnabled = false;
+
+            if (stretch) {
+                ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
+            } else {
+                const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
+                const x = (ctx.canvas.width - image.width * scale) / 2;
+                const y = (ctx.canvas.height - image.height * scale) / 2;
+                ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
+            }
+
+            URL.revokeObjectURL(blobUrl);
+            
+            if (onComplete) onComplete();
+            resolve();
+        };
+        
+        image.onerror = (error) => {
+            console.error("Error loading image:", error);
+            URL.revokeObjectURL(blobUrl);
+            reject(new Error("Failed to load image"));
+        };
+        
+        image.src = blobUrl;
+    });
+}
+
 export async function tm_blaze(
     ctx: CanvasRenderingContext2D,
     machine: TM,
@@ -277,50 +319,28 @@ export async function tm_blaze(
 
         // Send data to the worker
         const promise = new Promise<ArrayBuffer>((resolve, reject) => {
-            worker.onmessage = (event) => {
+            worker.onmessage = async (event) => {
                 if (event.data.type === 'error') {
                     reject(new Error(event.data.message));
                     worker.terminate();
                     return;
                 }
 
-                // Create an object URL for the PNG data
-                const blobUrl = URL.createObjectURL(new Blob([event.data.pngData], { type: 'image/png' }));
-                
-                // Create an image and render it to the canvas
-                const image = new Image();
-                image.onload = () => {
-                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                    ctx.imageSmoothingEnabled = false;
-
-                    if (stretch) {
-                        ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
-                    } else {
-                        const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
-                        const x = (ctx.canvas.width - image.width * scale) / 2;
-                        const y = (ctx.canvas.height - image.height * scale) / 2;
-                        ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
-                    }
-
-                    URL.revokeObjectURL(blobUrl);
+                try {
+                    // Render the image data
+                    await renderPngDataToCanvas(ctx, event.data.pngData, stretch);
                     
                     // If this is the final result, resolve the promise
                     if (!event.data.intermediate) {
                         worker.terminate();
                         resolve();
                     }
-                };
-                
-                image.onerror = (error) => {
-                    console.error("Error loading image:", error);
-                    URL.revokeObjectURL(blobUrl);
+                } catch (error) {
                     if (!event.data.intermediate) {
                         worker.terminate();
-                        reject(new Error("Failed to load image"));
+                        reject(error);
                     }
-                };
-                
-                image.src = blobUrl;
+                }
             };
 
             worker.onerror = (error) => {
@@ -338,33 +358,7 @@ export async function tm_blaze(
         });
 
         // Wait for the worker to finish
-        const pngData = await promise;
-
-        // Create an object URL for the PNG data
-        const blobUrl = URL.createObjectURL(new Blob([pngData], { type: 'image/png' }));
-
-        // Render the PNG data to the canvas synchronously
-        const image = new Image();
-        image.onload = () => {
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-            ctx.imageSmoothingEnabled = false;
-
-            if (stretch) {
-                ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
-            } else {
-                const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
-                const x = (ctx.canvas.width - image.width * scale) / 2;
-                const y = (ctx.canvas.height - image.height * scale) / 2;
-                ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
-            }
-
-            URL.revokeObjectURL(blobUrl);
-        };
-        image.onerror = (error) => {
-            console.error("Error loading image:", error);
-            URL.revokeObjectURL(blobUrl);
-        };
-        image.src = blobUrl;
+        await promise;
     } catch (error) {
         console.error("Error in tm_blaze:", error);
         throw error;
