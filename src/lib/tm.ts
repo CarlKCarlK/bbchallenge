@@ -312,6 +312,16 @@ function renderPngDataToCanvas(
     });
 }
 
+// Store the last Blaze image data for reuse when toggling stretch
+let lastBlazeImageData: ArrayBuffer | null = null;
+let lastBlazeParams: {
+    machineCode: string;
+    canvasWidth: number;
+    canvasHeight: number;
+    binning: boolean;
+    stepCount: bigint;
+} | null = null;
+
 export async function tm_blaze(
     ctx: CanvasRenderingContext2D,
     machine: TM,
@@ -320,9 +330,36 @@ export async function tm_blaze(
     quality = true,
     statusElement?: HTMLElement // Optional parameter for the status element
 ) {
+    // Get current machine code
+    const machineCode = tmToMachineCode(machine);
+    
+    // Check if we're just toggling stretch with the same parameters
+    const isJustTogglingStretch = lastBlazeImageData !== null && 
+                                 lastBlazeParams !== null &&
+                                 lastBlazeParams.machineCode === machineCode &&
+                                 lastBlazeParams.canvasWidth === ctx.canvas.width &&
+                                 lastBlazeParams.canvasHeight === ctx.canvas.height &&
+                                 lastBlazeParams.binning === quality &&
+                                 lastBlazeParams.stepCount === step_count;
+    
+    if (isJustTogglingStretch) {
+        // Just re-render the existing image with the new stretch setting
+        await renderPngDataToCanvas(ctx, lastBlazeImageData, stretch);
+        return;
+    }
+    
+    // If parameters changed, clear the cached data
+    lastBlazeImageData = null;
+    
     try {
-        // Convert the machine to a format suitable for WASM
-        const machineCode = tmToMachineCode(machine);
+        // Save the current parameters for future checks
+        lastBlazeParams = {
+            machineCode,
+            canvasWidth: ctx.canvas.width,
+            canvasHeight: ctx.canvas.height,
+            binning: quality,
+            stepCount: step_count
+        };
 
         // Set binning based on the quality parameter
         const binning = quality;
@@ -374,16 +411,8 @@ export async function tm_blaze(
         statusElement.innerHTML = '<em>Time: 0.00s • Steps: 0 • Ones: 0 • Running</em>';
         statusElement.style.display = 'block';
 
-        // Function to clean up if needed - only used on error
-        const cleanup = () => {
-            // We no longer remove the element, as we want to reuse it
-            if (autoCreatedStatusElement && statusElement) {
-                statusElement.style.display = 'none';
-            }
-        };
-
         // Send data to the worker
-        const promise = new Promise<ArrayBuffer>((resolve, reject) => {
+        const promise = new Promise<void>((resolve, reject) => {
             worker.onmessage = async (event) => {
                 if (event.data.type === 'error') {
                     if (statusElement) {
@@ -415,6 +444,9 @@ export async function tm_blaze(
                         statusElement.innerHTML = `<em>${statusText}</em>`;
                     }
 
+                    // Store the latest image data for stretch toggling
+                    lastBlazeImageData = event.data.pngData.buffer;
+                    
                     // Render the image data without status info
                     await renderPngDataToCanvas(ctx, event.data.pngData, stretch);
                     
