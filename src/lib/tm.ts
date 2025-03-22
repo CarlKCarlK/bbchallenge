@@ -191,6 +191,12 @@ export function tm_explore(
 	initial_tape = '0',
 	height = 1000
 ) {
+	// Hide any existing status element from blaze mode
+	const statusElement = document.getElementById('tm-blaze-status');
+	if (statusElement) {
+		statusElement.style.display = 'none';
+	}
+
 	const history = render_history(machine, initial_tape, height);
 
 	let zoom = 10;
@@ -252,7 +258,8 @@ export function tm_explore(
 
 	ctx.resetTransform();
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-	ctx.setTransform(zoom, 0, 0, 0, +x_offset, +y_offset);
+	// Fix the transform matrix - change the 0 to zoomt);
+	ctx.setTransform(zoom, 0, 0, zoom, +x_offset, +y_offset);
 	render();
 
 	return () => ctx.canvas.removeEventListener('wheel', wheel);
@@ -450,6 +457,12 @@ export function tm_trace_to_image(
 	fitCanvas = true,
 	showHeadMove = false
 ) {
+	// Hide any existing status element from blaze mode
+	const statusElement = document.getElementById('tm-blaze-status');
+	if (statusElement) {
+		statusElement.style.display = 'none';
+	}
+
 	width = Math.max(1, Math.min(99_999, Math.floor(width) || 0));
 	height = Math.max(1, Math.min(99_999, Math.floor(height) || 0));
 
