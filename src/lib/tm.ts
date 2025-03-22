@@ -338,13 +338,18 @@ export async function tm_blaze(
             if (existingStatusElement) {
                 // Use the existing element
                 statusElement = existingStatusElement as HTMLElement;
+                // Update styles in case they were previously set differently
+                statusElement.style.fontSize = '0.75em';
+                statusElement.style.marginBottom = '2px'; // Reduced from 6px to 2px
+                statusElement.style.padding = '1px'; // Reduced from 3px to 1px
             } else {
                 // Create a new status element
                 statusElement = document.createElement('div');
                 statusElement.id = 'tm-blaze-status'; // Add a unique ID
                 statusElement.style.fontStyle = 'italic';
-                statusElement.style.marginBottom = '8px';
-                statusElement.style.padding = '4px';
+                statusElement.style.fontSize = '0.75em';
+                statusElement.style.marginBottom = '2px'; // Reduced from 6px to 2px
+                statusElement.style.padding = '1px'; // Reduced from 3px to 1px
                 
                 // Try to find the parent container of the canvas
                 let canvasParent = ctx.canvas.parentElement;
