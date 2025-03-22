@@ -279,7 +279,9 @@ function renderPngDataToCanvas(
         // Create an image and render it to the canvas
         const image = new Image();
         image.onload = () => {
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            // Fill the canvas with white background first
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             ctx.imageSmoothingEnabled = false;
 
             // Determine rendering approach:
@@ -357,6 +359,10 @@ export async function tm_blaze(
     
     // If parameters changed, clear the cached data
     lastBlazeImageData = null;
+    
+    // Immediately set a white background to avoid black flicker
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
     try {
         // Save the current parameters for future checks
