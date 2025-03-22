@@ -312,7 +312,7 @@ function renderPngDataToCanvas(
     });
 }
 
-// Store the last Blaze image data for reuse when toggling stretch
+// Store the last Blaze image data and worker for reuse when toggling stretch
 let lastBlazeImageData: ArrayBuffer | null = null;
 let lastBlazeParams: {
     machineCode: string;
@@ -321,6 +321,7 @@ let lastBlazeParams: {
     binning: boolean;
     stepCount: bigint;
 } | null = null;
+let activeWorker: Worker | null = null;
 
 export async function tm_blaze(
     ctx: CanvasRenderingContext2D,
@@ -348,6 +349,12 @@ export async function tm_blaze(
         return;
     }
     
+    // Terminate any active worker before starting a new one
+    if (activeWorker) {
+        activeWorker.terminate();
+        activeWorker = null;
+    }
+    
     // If parameters changed, clear the cached data
     lastBlazeImageData = null;
     
@@ -366,6 +373,7 @@ export async function tm_blaze(
 
         // Create a worker using the tm-worker.ts file
         const worker = new Worker(new URL('./tm-worker.ts', import.meta.url), { type: 'module' });
+        activeWorker = worker;
 
         // Track start time
         const startTime = performance.now();
@@ -381,16 +389,16 @@ export async function tm_blaze(
                 statusElement = existingStatusElement as HTMLElement;
                 // Update styles in case they were previously set differently
                 statusElement.style.fontSize = '0.75em';
-                statusElement.style.marginBottom = '2px'; // Reduced from 6px to 2px
-                statusElement.style.padding = '1px'; // Reduced from 3px to 1px
+                statusElement.style.marginBottom = '2px';
+                statusElement.style.padding = '1px';
             } else {
                 // Create a new status element
                 statusElement = document.createElement('div');
-                statusElement.id = 'tm-blaze-status'; // Add a unique ID
+                statusElement.id = 'tm-blaze-status';
                 statusElement.style.fontStyle = 'italic';
                 statusElement.style.fontSize = '0.75em';
-                statusElement.style.marginBottom = '2px'; // Reduced from 6px to 2px
-                statusElement.style.padding = '1px'; // Reduced from 3px to 1px
+                statusElement.style.marginBottom = '2px';
+                statusElement.style.padding = '1px';
                 
                 // Try to find the parent container of the canvas
                 let canvasParent = ctx.canvas.parentElement;
@@ -414,12 +422,20 @@ export async function tm_blaze(
         // Send data to the worker
         const promise = new Promise<void>((resolve, reject) => {
             worker.onmessage = async (event) => {
+                // Skip processing messages from terminated workers
+                if (worker !== activeWorker) {
+                    return;
+                }
+                
                 if (event.data.type === 'error') {
                     if (statusElement) {
                         statusElement.innerHTML = `<em>Error: ${event.data.message}</em>`;
                     }
                     reject(new Error(event.data.message));
                     worker.terminate();
+                    if (activeWorker === worker) {
+                        activeWorker = null;
+                    }
                     return;
                 }
 
@@ -445,7 +461,9 @@ export async function tm_blaze(
                     }
 
                     // Store the latest image data for stretch toggling
-                    lastBlazeImageData = event.data.pngData.buffer;
+                    // Create a copy of the buffer to ensure we keep it even if the original is detached
+                    const bufferCopy = new Uint8Array(event.data.pngData).buffer;
+                    lastBlazeImageData = bufferCopy;
                     
                     // Render the image data without status info
                     await renderPngDataToCanvas(ctx, event.data.pngData, stretch);
@@ -453,11 +471,17 @@ export async function tm_blaze(
                     // If this is the final result, resolve the promise
                     if (!event.data.intermediate) {
                         worker.terminate();
+                        if (activeWorker === worker) {
+                            activeWorker = null;
+                        }
                         resolve();
                     }
                 } catch (error) {
                     if (!event.data.intermediate) {
                         worker.terminate();
+                        if (activeWorker === worker) {
+                            activeWorker = null;
+                        }
                         reject(error);
                     }
                 }
@@ -469,6 +493,9 @@ export async function tm_blaze(
                 }
                 reject(error);
                 worker.terminate();
+                if (activeWorker === worker) {
+                    activeWorker = null;
+                }
             };
         });
 
