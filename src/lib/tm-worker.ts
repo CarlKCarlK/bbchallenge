@@ -10,9 +10,12 @@ interface WorkerMessage {
 
 interface WorkerResponse {
     type: 'result' | 'error'; // Message type
-	intermediate: boolean;     // Is this an intermediate result?s
+	intermediate: boolean;     // Is this an intermediate result?
     pngData?: Uint8Array;     // Optional PNG data (only for 'result')
     message?: string;         // Optional error message (only for 'error')
+    stepsCompleted?: bigint;  // Number of steps completed
+    onesCount?: number;       // Number of ones on the tape
+    halted?: boolean;         // Whether the machine has halted
 }
 
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
@@ -34,29 +37,28 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
-            if (!spaceTimeMachine.step_for_secs(
+            // Store the result of step_for_secs to check if we're done
+            const stillRunning = spaceTimeMachine.step_for_secs(
                 run_for_seconds, 
                 BigInt(stepCount), // Convert stepCount to BigInt
                 10_000n // Already a BigInt
-            )) break;
+            );
             
-            // Send intermediate result
+            // Send intermediate result with status information
             const response: WorkerResponse = {
                 type: 'result',
-                intermediate: true,
-                pngData: spaceTimeMachine.png_data()
+                intermediate: stillRunning, // If stillRunning is false, this is the final result
+                pngData: spaceTimeMachine.png_data(),
+                stepsCompleted: spaceTimeMachine.step_count(),
+                onesCount: spaceTimeMachine.count_ones(),
+                halted: spaceTimeMachine.is_halted()
             };
             self.postMessage(response, [response.pngData!.buffer]);
+            
+            // If we're done, break out of the loop
+            if (!stillRunning) break;
         }
 
-
-		// Get the PNG data and send it back to the main thread
-		const response: WorkerResponse = {
-			type: 'result',
-			intermediate: false,
-			pngData: spaceTimeMachine.png_data()
-		};
-		self.postMessage(response, [response.pngData!.buffer]);
 	} catch (error: any) {
 		// Send any errors back to the main thread
 		const response: WorkerResponse = {
