@@ -458,9 +458,10 @@ export async function tm_blaze(
                         // Determine machine state
                         const machineState = event.data.halted ? 'Halted' : event.data.intermediate ? 'Running' : 'Not Halted';
                         
-                        // Create status text
+                        // Create status text with commas in Ones count
                         const onesCount = event.data.onesCount || 0;
-                        const statusText = `Time: ${elapsedTime.toFixed(2)}s • Steps: ${formattedSteps} • Ones: ${onesCount} • ${machineState}`;
+                        const formattedOnesCount = onesCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        const statusText = `Time: ${elapsedTime.toFixed(2)}s • Steps: ${formattedSteps} • Ones: ${formattedOnesCount} • ${machineState}`;
                         
                         // Update the status element
                         statusElement.innerHTML = `<em>${statusText}</em>`;
