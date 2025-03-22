@@ -282,10 +282,14 @@ function renderPngDataToCanvas(
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             ctx.imageSmoothingEnabled = false;
 
-            // Render the image without any status info overlay
-            if (stretch) {
+            // Determine rendering approach:
+            // 1. If stretch=true OR image is at least as large as canvas in both dimensions, stretch to fill
+            // 2. Otherwise (stretch=false AND at least one dimension is smaller), scale proportionally
+            if (stretch || (image.width >= ctx.canvas.width && image.height >= ctx.canvas.height)) {
+                // Always stretch to fill the entire canvas in these cases
                 ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
             } else {
+                // Only use proportional scaling when stretch=false AND image is smaller in at least one dimension
                 const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
                 const x = (ctx.canvas.width - image.width * scale) / 2;
                 const y = (ctx.canvas.height - image.height * scale) / 2;
