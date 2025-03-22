@@ -258,17 +258,11 @@ export function tm_explore(
 	return () => ctx.canvas.removeEventListener('wheel', wheel);
 }
 
-// Helper function to render PNG data to canvas
+// Helper function to render PNG data to canvas (without status text)
 function renderPngDataToCanvas(
     ctx: CanvasRenderingContext2D,
     pngData: ArrayBuffer,
     stretch: boolean,
-    statusInfo?: { 
-        time: number, 
-        steps: bigint, 
-        ones?: number, 
-        state?: 'Running' | 'Halted' | 'Not Halted' 
-    },
     onComplete?: () => void
 ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -281,55 +275,14 @@ function renderPngDataToCanvas(
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             ctx.imageSmoothingEnabled = false;
 
-            // If we have status info, draw it before the image
-            if (statusInfo) {
-                // Save current context state
-                ctx.save();
-                
-                // Set text style for status info - using white text for better visibility
-                ctx.font = 'italic 14px Arial';
-                ctx.fillStyle = '#FFFFFF'; // White text color
-                
-                // Draw a semi-transparent background for the text
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent black background
-                ctx.fillRect(0, 0, ctx.canvas.width, 25); // Create a background strip for the text
-                
-                // Format steps with commas
-                const formattedSteps = statusInfo.steps.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                
-                // Create status text
-                const onesText = statusInfo.ones !== undefined ? `• Ones: ${statusInfo.ones}` : '';
-                const stateText = statusInfo.state ? `• ${statusInfo.state}` : '';
-                const statusText = `Time: ${statusInfo.time.toFixed(2)}s • Steps: ${formattedSteps} ${onesText} ${stateText}`;
-                
-                // Set text color to white after drawing the background
-                ctx.fillStyle = '#FFFFFF';
-                
-                // Position and draw text
-                ctx.fillText(statusText, 10, 18);
-                
-                // Restore context
-                ctx.restore();
-                
-                // Adjust image position to leave space for status text
-                if (stretch) {
-                    ctx.drawImage(image, 0, 0, image.width, image.height, 0, 25, ctx.canvas.width, ctx.canvas.height - 25);
-                } else {
-                    const scale = Math.min((ctx.canvas.height - 25) / image.height, ctx.canvas.width / image.width);
-                    const x = (ctx.canvas.width - image.width * scale) / 2;
-                    const y = 25 + ((ctx.canvas.height - 25) - image.height * scale) / 2;
-                    ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
-                }
+            // Render the image without any status info overlay
+            if (stretch) {
+                ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
             } else {
-                // Original rendering code without status info
-                if (stretch) {
-                    ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
-                } else {
-                    const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
-                    const x = (ctx.canvas.width - image.width * scale) / 2;
-                    const y = (ctx.canvas.height - image.height * scale) / 2;
-                    ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
-                }
+                const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
+                const x = (ctx.canvas.width - image.width * scale) / 2;
+                const y = (ctx.canvas.height - image.height * scale) / 2;
+                ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
             }
 
             URL.revokeObjectURL(blobUrl);
@@ -353,7 +306,8 @@ export async function tm_blaze(
     machine: TM,
     step_count = 1000n,
     stretch = true,
-    quality = true
+    quality = true,
+    statusElement?: HTMLElement // Optional parameter for the status element
 ) {
     try {
         // Convert the machine to a format suitable for WASM
@@ -368,10 +322,57 @@ export async function tm_blaze(
         // Track start time
         const startTime = performance.now();
 
+        // Create or find status element if not provided
+        let autoCreatedStatusElement = false;
+        if (!statusElement) {
+            // Try to find an existing status element with our special ID
+            const existingStatusElement = document.getElementById('tm-blaze-status');
+            
+            if (existingStatusElement) {
+                // Use the existing element
+                statusElement = existingStatusElement as HTMLElement;
+            } else {
+                // Create a new status element
+                statusElement = document.createElement('div');
+                statusElement.id = 'tm-blaze-status'; // Add a unique ID
+                statusElement.style.fontStyle = 'italic';
+                statusElement.style.marginBottom = '8px';
+                statusElement.style.padding = '4px';
+                
+                // Try to find the parent container of the canvas
+                let canvasParent = ctx.canvas.parentElement;
+                
+                // Insert the status element before the canvas
+                if (canvasParent) {
+                    canvasParent.insertBefore(statusElement, ctx.canvas);
+                } else {
+                    // If can't find parent, insert right before the canvas in the DOM
+                    ctx.canvas.parentNode?.insertBefore(statusElement, ctx.canvas);
+                }
+                
+                autoCreatedStatusElement = true;
+            }
+        }
+
+        // Initial status update
+        statusElement.innerHTML = '<em>Time: 0.00s • Steps: 0 • Ones: 0 • Running</em>';
+        statusElement.style.display = 'block';
+
+        // Function to clean up if needed - only used on error
+        const cleanup = () => {
+            // We no longer remove the element, as we want to reuse it
+            if (autoCreatedStatusElement && statusElement) {
+                statusElement.style.display = 'none';
+            }
+        };
+
         // Send data to the worker
         const promise = new Promise<ArrayBuffer>((resolve, reject) => {
             worker.onmessage = async (event) => {
                 if (event.data.type === 'error') {
+                    if (statusElement) {
+                        statusElement.innerHTML = `<em>Error: ${event.data.message}</em>`;
+                    }
                     reject(new Error(event.data.message));
                     worker.terminate();
                     return;
@@ -381,18 +382,25 @@ export async function tm_blaze(
                     // Calculate elapsed time
                     const elapsedTime = (performance.now() - startTime) / 1000;
                     
-                    // Create status info with current data
-                    // For now using placeholders for ones count and state
-                    const stepsCompleted = event.data.stepsCompleted || 0n;
-                    const statusInfo = {
-                        time: elapsedTime,
-                        steps: BigInt(stepsCompleted),
-                        ones: event.data.onesCount || 0,
-                        state: event.data.halted ? 'Halted' : event.data.intermediate ? 'Running' : 'Not Halted'
-                    };
+                    // Update status element
+                    if (statusElement) {
+                        // Format steps with commas
+                        const stepsCompleted = event.data.stepsCompleted || 0n;
+                        const formattedSteps = BigInt(stepsCompleted).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        
+                        // Determine machine state
+                        const machineState = event.data.halted ? 'Halted' : event.data.intermediate ? 'Running' : 'Not Halted';
+                        
+                        // Create status text
+                        const onesCount = event.data.onesCount || 0;
+                        const statusText = `Time: ${elapsedTime.toFixed(2)}s • Steps: ${formattedSteps} • Ones: ${onesCount} • ${machineState}`;
+                        
+                        // Update the status element
+                        statusElement.innerHTML = `<em>${statusText}</em>`;
+                    }
 
-                    // Render the image data with status info
-                    await renderPngDataToCanvas(ctx, event.data.pngData, stretch, statusInfo);
+                    // Render the image data without status info
+                    await renderPngDataToCanvas(ctx, event.data.pngData, stretch);
                     
                     // If this is the final result, resolve the promise
                     if (!event.data.intermediate) {
@@ -408,6 +416,9 @@ export async function tm_blaze(
             };
 
             worker.onerror = (error) => {
+                if (statusElement) {
+                    statusElement.innerHTML = `<em>Error: ${error.message}</em>`;
+                }
                 reject(error);
                 worker.terminate();
             };
