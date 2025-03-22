@@ -278,18 +278,49 @@ export async function tm_blaze(
         // Send data to the worker
         const promise = new Promise<ArrayBuffer>((resolve, reject) => {
             worker.onmessage = (event) => {
-                if (event.data.error) {
-                    reject(new Error(event.data.error));
+                if (event.data.type === 'error') {
+                    reject(new Error(event.data.message));
+                    worker.terminate();
                     return;
                 }
 
-                // Handle intermediate updates
-                if (event.data.intermediate) {
-                    return;
-                }
+                // Create an object URL for the PNG data
+                const blobUrl = URL.createObjectURL(new Blob([event.data.pngData], { type: 'image/png' }));
+                
+                // Create an image and render it to the canvas
+                const image = new Image();
+                image.onload = () => {
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    ctx.imageSmoothingEnabled = false;
 
-                // Resolve the promise with the PNG data
-                resolve(event.data.pngData);
+                    if (stretch) {
+                        ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, ctx.canvas.width, ctx.canvas.height);
+                    } else {
+                        const scale = Math.min(ctx.canvas.height / image.height, ctx.canvas.width / image.width);
+                        const x = (ctx.canvas.width - image.width * scale) / 2;
+                        const y = (ctx.canvas.height - image.height * scale) / 2;
+                        ctx.drawImage(image, 0, 0, image.width, image.height, x, y, image.width * scale, image.height * scale);
+                    }
+
+                    URL.revokeObjectURL(blobUrl);
+                    
+                    // If this is the final result, resolve the promise
+                    if (!event.data.intermediate) {
+                        worker.terminate();
+                        resolve();
+                    }
+                };
+                
+                image.onerror = (error) => {
+                    console.error("Error loading image:", error);
+                    URL.revokeObjectURL(blobUrl);
+                    if (!event.data.intermediate) {
+                        worker.terminate();
+                        reject(new Error("Failed to load image"));
+                    }
+                };
+                
+                image.src = blobUrl;
             };
 
             worker.onerror = (error) => {
