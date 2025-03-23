@@ -12,7 +12,9 @@
 		tmToMachineCode,
 		machineCodeToTM,
 		DB_SIZE,
-		APIDecisionStatusToTMDecisionStatus
+		APIDecisionStatusToTMDecisionStatus,
+		formatStepCountWithCommas,
+		parseFormattedStepCount
 	} from '$lib/tm';
 	import { BB5_23M_steps_halter, BB5_champion, Skelet_machines } from '$lib/machine_repertoire';
 
@@ -405,6 +407,12 @@
 		visualizationMode = VisualizationMode.DEFAULT;
 		console.log("Auto-switched from Blaze to Default mode: machine has more than 2 symbols");
 	}
+
+	// Add a new variable to hold the formatted steps value for display
+	let formattedNbIter = '';
+
+	// Update formattedNbIter whenever nbIter changes
+	$: formattedNbIter = formatStepCountWithCommas(nbIter.toString());
 </script>
 
 {#key machineID || machineCode}
@@ -606,10 +614,20 @@
 										<div class="flex items-center">
 											<input
 												class={isBlazeMode(visualizationMode) ? 'w-[150px] text-black' : 'w-[70px] text-black'}
-												type="number"
-												bind:value={nbIter}
+												type="text"
+												value={formattedNbIter}
+												on:input={(e) => {
+													// Format the input value with commas
+													const plainValue = parseFormattedStepCount(e.currentTarget.value);
+													if (!isNaN(Number(plainValue))) {
+														nbIter = BigInt(plainValue || "0"); 
+														formattedNbIter = formatStepCountWithCommas(plainValue);
+														e.currentTarget.value = formattedNbIter;
+													}
+												}}
 												on:change={(e) => {
-													nbIter = BigInt(e.currentTarget.value); // Convert input value to bigint
+													const plainValue = parseFormattedStepCount(e.currentTarget.value);
+													nbIter = BigInt(plainValue || "0");
 													const url = new URL(window.location.href);
 													const hasBlaze = url.searchParams.has('blaze');
 													window.history.pushState({}, '', getSimulationLink());
@@ -617,6 +635,9 @@
 														url.searchParams.set('blaze', '');
 														window.history.replaceState({}, '', url.pathname + url.search);
 													}
+													// Update the displayed value with proper formatting
+													formattedNbIter = formatStepCountWithCommas(nbIter.toString());
+													e.currentTarget.value = formattedNbIter;
 												}}
 												on:blur={(e) => {
 													if (!isBlazeMode(visualizationMode))
@@ -624,7 +645,8 @@
 															if (isNaN(Number(nbIter)) || nbIter <= 0n) nbIter = 1n;
 															if (nbIter > 99999n) nbIter = 99999n;
 														}
-													e.currentTarget.value = nbIter.toString();
+													formattedNbIter = formatStepCountWithCommas(nbIter.toString());
+													e.currentTarget.value = formattedNbIter;
 												}}
 											/>
 											{#if isBlazeMode(visualizationMode)}
@@ -632,6 +654,7 @@
 													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded"
 													on:click={() => {
 														nbIter =  nbIter * 10n;
+														formattedNbIter = formatStepCountWithCommas(nbIter.toString());
 														window.history.pushState({}, '', getSimulationLink());
 													}}
 												>
@@ -641,6 +664,7 @@
 													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded"
 													on:click={() => {
 														nbIter = (nbIter > 10n) ? nbIter / 10n : 1n;
+														formattedNbIter = formatStepCountWithCommas(nbIter.toString());
 														window.history.pushState({}, '', getSimulationLink());
 													}}
 												>

@@ -327,6 +327,11 @@ let activeWorker: Worker | null = null;
 let isRunningBlaze = false; // Add this to track if blaze is running
 let wasManuallyStopped = false; // Add this to track if blaze was manually stopped
 
+// Add a function to format numbers with thousand separators
+function formatWithCommas(num: string | number | bigint): string {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 // Add a function to clear the cached data that can be called from outside
 export function clearBlazeCache() {
     lastBlazeImageData = null;
@@ -506,7 +511,7 @@ export async function tm_blaze(
                     if (statusElement) {
                         // Format steps with commas
                         const stepsCompleted = event.data.stepsCompleted || 0n;
-                        const formattedSteps = BigInt(stepsCompleted).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        const formattedSteps = formatWithCommas(stepsCompleted);
                         
                         // Determine machine state
                         let machineState;
@@ -518,7 +523,7 @@ export async function tm_blaze(
                         
                         // Create status text with commas in Ones count
                         const onesCount = event.data.onesCount || 0;
-                        const formattedOnesCount = onesCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        const formattedOnesCount = formatWithCommas(onesCount);
                         const statusText = `Time: ${elapsedTime.toFixed(2)}s • Steps: ${formattedSteps} • Ones: ${formattedOnesCount} • ${machineState}`;
                         
                         // Update the status element
@@ -667,4 +672,24 @@ export function step(machine: TM, curr_state, curr_pos, tape, use_int_positions 
 	tape[f(curr_pos)] = write;
 	const next_pos = curr_pos + (move ? -1 : 1);
 	return [goto, next_pos];
+}
+
+// Function to format step count with thousand separators for input fields
+export function formatStepCountWithCommas(value: string): string {
+    // Remove any existing commas
+    const plainNumber = value.replace(/,/g, '');
+    
+    // Check if it's a valid number
+    if (!plainNumber || isNaN(Number(plainNumber))) {
+        return plainNumber; // Return as is if not a valid number
+    }
+    
+    // Format with thousand separators
+    return plainNumber.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Function to convert a formatted string with commas back to a plain number
+export function parseFormattedStepCount(formattedValue: string): string {
+    // Remove all commas to get the plain number
+    return formattedValue.replace(/,/g, '');
 }
