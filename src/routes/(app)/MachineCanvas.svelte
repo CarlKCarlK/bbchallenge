@@ -1,5 +1,9 @@
 <script lang="ts">
-    import { tm_trace_to_image, tm_explore, tm_blaze } from '$lib/tm';
+    import { tm_trace_to_image, tm_explore, tm_blaze, clearBlazeCache } from '$lib/tm';
+    import { onMount, createEventDispatcher } from 'svelte';
+    
+    // Create event dispatcher
+    const dispatch = createEventDispatcher();
     
     // Define our VisualizationMode enum with proper TypeScript typing
     enum VisualizationMode {
@@ -56,6 +60,42 @@
         context.fill();
     };
     
+    // Function to force a redraw (for the re-run button)
+    function reRun(): void {
+        console.log('Forcing re-run of blaze visualization');
+        // Clear the Blaze cache to force a new render
+        clearBlazeCache();
+        if (canvas) {
+            // Force immediate redraw
+            draw();
+        }
+    }
+    
+    // Setup the re-run button click handler with direct event handler
+    function setupReRunButton() {
+        setTimeout(() => {
+            const rerunButton = document.getElementById('tm-blaze-rerun');
+            if (rerunButton) {
+                rerunButton.onclick = () => {
+                    console.log('Re-run button clicked');
+                    reRun();
+                    dispatch('rerun');
+                };
+            }
+        }, 0);
+    }
+    
+    onMount(() => {
+        if (isBlazeMode(visualizationMode)) {
+            setupReRunButton();
+        }
+    });
+    
+    // Watch for changes to visualization mode to set up the button when switching to Blaze
+    $: if (isBlazeMode(visualizationMode)) {
+        setupReRunButton();
+    }
+    
     let drawCleanup: (() => void) | undefined;
     async function draw(): Promise<void> {
         if (drawCleanup) drawCleanup();
@@ -76,9 +116,9 @@
 		// Choose visualization method based on mode
 		switch (visualizationMode) {
 			case VisualizationMode.EXPLORE:
-            const height_explore = Number(nbIter > 99999n ? 99999n : nbIter);
-			drawCleanup = tm_explore(context, machine, initial_tape, height_explore);
-			break;
+                const height_explore = Number(nbIter > 99999n ? 99999n : nbIter);
+			    drawCleanup = tm_explore(context, machine, initial_tape, height_explore);
+			    break;
 			
 			case VisualizationMode.BLAZE:
 				// Pass stretch and quality parameters to tm_blaze
@@ -89,19 +129,19 @@
 			
 			case VisualizationMode.DEFAULT:
 			default:
-			// Default mode
-            const height_default = Number(nbIter > 99999n ? 99999n : nbIter);
-			tm_trace_to_image(
-				context,
-				machine,
-				initial_tape,
-				tapeWidth,
-				height_default,
-				origin_x,
-				true,
-				showHeadMove
-			);
-			break;
+			    // Default mode
+                const height_default = Number(nbIter > 99999n ? 99999n : nbIter);
+			    tm_trace_to_image(
+				    context,
+				    machine,
+				    initial_tape,
+				    tapeWidth,
+				    height_default,
+				    origin_x,
+				    true,
+				    showHeadMove
+			    );
+			    break;
 		}
     }
     

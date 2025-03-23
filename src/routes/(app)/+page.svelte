@@ -665,8 +665,18 @@
 													class:bg-gray-200={!quality}
 													class:text-gray-800={!quality}
 													on:click={() => quality = !quality}
+													data-param="quality"
 												>
 													{quality ? 'quality' : 'speed'}
+												</button>
+												
+												<!-- Add the re-run button with active styling instead of opacity-50 -->
+												<button 
+													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded hover:bg-blue-500 active:bg-blue-700"
+													id="tm-blaze-rerun"
+													data-param="rerun"
+												>
+													re-run
 												</button>
 											{/if}
 										</div>

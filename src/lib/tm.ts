@@ -325,6 +325,16 @@ let lastBlazeParams: {
 } | null = null;
 let activeWorker: Worker | null = null;
 
+// Add a function to clear the cached data that can be called from outside
+export function clearBlazeCache() {
+    lastBlazeImageData = null;
+    lastBlazeParams = null;
+    if (activeWorker) {
+        activeWorker.terminate();
+        activeWorker = null;
+    }
+}
+
 export async function tm_blaze(
     ctx: CanvasRenderingContext2D,
     machine: TM,
@@ -424,6 +434,9 @@ export async function tm_blaze(
         // Initial status update
         statusElement.innerHTML = '<em>Time: 0.00s • Steps: 0 • Ones: 0 • Running</em>';
         statusElement.style.display = 'block';
+        
+        // Remove the code that adds the re-run button
+        // The button is now added directly in the Svelte component
 
         // Send data to the worker
         const promise = new Promise<void>((resolve, reject) => {
