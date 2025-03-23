@@ -635,7 +635,7 @@
 														window.history.pushState({}, '', getSimulationLink());
 													}}
 												>
-													×10
+													▲ ×10
 												</button>
 												<button 
 													class="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded"
@@ -644,7 +644,7 @@
 														window.history.pushState({}, '', getSimulationLink());
 													}}
 												>
-													÷10
+													▼ ÷10
 												</button>
 												<button 
 													class="ml-1 text-xs px-1 py-0.5 rounded"
