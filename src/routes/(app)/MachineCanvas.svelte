@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { tm_trace_to_image, tm_explore, tm_blaze, clearBlazeCache } from '$lib/tm';
-    import { onMount, createEventDispatcher } from 'svelte';
+    import { tm_trace_to_image, tm_explore, tm_blaze, clearBlazeCache, stopBlazeWorker, isBlazeRunning, wasBlazeManuallyStoppped } from '$lib/tm';
+    import { onMount, createEventDispatcher, onDestroy } from 'svelte';
     
     // Create event dispatcher
     const dispatch = createEventDispatcher();
@@ -28,6 +28,9 @@
     
     // New quality parameter for binning control in Blaze mode
     export let quality: boolean = true;
+    
+    // Track if blaze is currently running
+    let isRunning = false;
     
     // Helper functions to simplify conditional checks with proper types
     function isDefaultMode(mode: VisualizationMode): boolean {
@@ -60,40 +63,106 @@
         context.fill();
     };
     
-    // Function to force a redraw (for the re-run button)
-    function reRun(): void {
-        console.log('Forcing re-run of blaze visualization');
-        // Clear the Blaze cache to force a new render
-        clearBlazeCache();
-        if (canvas) {
-            // Force immediate redraw
-            draw();
+    // Function to handle the re-run/stop button
+    function handleBlazeButton(): void {
+        if (isRunning) {
+            // If running, stop the worker
+            console.log('Stopping blaze visualization');
+            const stopped = stopBlazeWorker();
+            if (stopped) {
+                isRunning = false;
+                // Dispatch event to update UI
+                dispatch('blazeStateChange', { running: false });
+                
+                // Update button immediately
+                updateBlazeButtonText();
+                
+                // Find and update the status element manually in case the worker's terminated
+                const statusElement = document.getElementById('tm-blaze-status');
+                if (statusElement) {
+                    const currentText = statusElement.textContent || '';
+                    // Replace "Running" with "Stopped" in the status text
+                    const updatedText = currentText.replace(/Running/, 'Stopped');
+                    statusElement.innerHTML = `<em>${updatedText}</em>`;
+                }
+            }
+        } else {
+            // If not running, start a new run
+            console.log('Forcing re-run of blaze visualization');
+            // Clear the Blaze cache to force a new render
+            clearBlazeCache();
+            if (canvas) {
+                // Force immediate redraw
+                draw();
+                dispatch('blazeStateChange', { running: true });
+            }
         }
     }
     
-    // Setup the re-run button click handler with direct event handler
-    function setupReRunButton() {
+    // Setup the re-run/stop button click handler
+    function setupBlazeButton() {
         setTimeout(() => {
-            const rerunButton = document.getElementById('tm-blaze-rerun');
-            if (rerunButton) {
-                rerunButton.onclick = () => {
-                    console.log('Re-run button clicked');
-                    reRun();
-                    dispatch('rerun');
-                };
+            const blazeButton = document.getElementById('tm-blaze-rerun');
+            if (blazeButton) {
+                blazeButton.onclick = handleBlazeButton;
+                
+                // Update button text based on running state
+                updateBlazeButtonText();
             }
         }, 0);
     }
     
+    // Function to update button text based on running state
+    function updateBlazeButtonText() {
+        const blazeButton = document.getElementById('tm-blaze-rerun');
+        if (blazeButton) {
+            // Get current running state from the TM module
+            isRunning = isBlazeRunning();
+            
+            // Update button text/class based on running state
+            if (isRunning) {
+                blazeButton.textContent = 'stop';
+                blazeButton.classList.remove('bg-blue-600', 'text-white', 'hover:bg-blue-500');
+                blazeButton.classList.add('bg-white', 'text-black', 'border', 'border-gray-300');
+            } else {
+                blazeButton.textContent = 're-run';
+                blazeButton.classList.remove('bg-white', 'text-black', 'border', 'border-gray-300');
+                blazeButton.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-500');
+            }
+        }
+    }
+    
+    // Function to start a timer to update button state
+    let buttonStateTimer: number;
+    function startButtonStateTimer() {
+        // Clear any existing timer
+        if (buttonStateTimer) clearInterval(buttonStateTimer);
+        
+        // Start a new timer to update button state every 200ms
+        buttonStateTimer = setInterval(() => {
+            updateBlazeButtonText();
+        }, 200);
+    }
+    
     onMount(() => {
         if (isBlazeMode(visualizationMode)) {
-            setupReRunButton();
+            setupBlazeButton();
+            startButtonStateTimer();
         }
+    });
+    
+    onDestroy(() => {
+        // Clean up timer on component destroy
+        if (buttonStateTimer) clearInterval(buttonStateTimer);
     });
     
     // Watch for changes to visualization mode to set up the button when switching to Blaze
     $: if (isBlazeMode(visualizationMode)) {
-        setupReRunButton();
+        setupBlazeButton();
+        startButtonStateTimer();
+    } else {
+        // Clear timer when not in Blaze mode
+        if (buttonStateTimer) clearInterval(buttonStateTimer);
     }
     
     let drawCleanup: (() => void) | undefined;
@@ -122,10 +191,31 @@
 			
 			case VisualizationMode.BLAZE:
 				// Pass stretch and quality parameters to tm_blaze
-				await tm_blaze(context, machine, nbIter, stretch, quality).catch(error => {
-					console.error("Error in blaze visualization:", error);
-				});
-				break;
+				try {
+                    // Track running state before calling tm_blaze
+                    isRunning = true;
+                    dispatch('blazeStateChange', { running: true });
+                    
+                    // Update button immediately
+                    updateBlazeButtonText();
+                    
+                    await tm_blaze(context, machine, nbIter, stretch, quality).catch(error => {
+                        console.error("Error in blaze visualization:", error);
+                    });
+                    
+                    // Update running state after tm_blaze completes
+                    isRunning = false;
+                    dispatch('blazeStateChange', { running: false });
+                    
+                    // Update button after completion
+                    updateBlazeButtonText();
+                } catch (error) {
+                    console.error("Error in blaze visualization:", error);
+                    isRunning = false;
+                    dispatch('blazeStateChange', { running: false });
+                    updateBlazeButtonText();
+                }
+                break;
 			
 			case VisualizationMode.DEFAULT:
 			default:

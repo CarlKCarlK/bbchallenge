@@ -324,6 +324,8 @@ let lastBlazeParams: {
     stepCount: bigint;
 } | null = null;
 let activeWorker: Worker | null = null;
+let isRunningBlaze = false; // Add this to track if blaze is running
+let wasManuallyStopped = false; // Add this to track if blaze was manually stopped
 
 // Add a function to clear the cached data that can be called from outside
 export function clearBlazeCache() {
@@ -333,6 +335,40 @@ export function clearBlazeCache() {
         activeWorker.terminate();
         activeWorker = null;
     }
+    isRunningBlaze = false; // Reset the running state
+    wasManuallyStopped = false; // Reset the manually stopped state
+}
+
+// Add a function to stop the active worker
+export function stopBlazeWorker() {
+    if (activeWorker) {
+        wasManuallyStopped = true; // Set the manually stopped flag
+        activeWorker.terminate();
+        activeWorker = null;
+        isRunningBlaze = false; // Reset the running state
+        
+        // Find and update the status element immediately
+        const statusElement = document.getElementById('tm-blaze-status');
+        if (statusElement) {
+            // Extract the current status text and replace "Running" with "Stopped"
+            const currentText = statusElement.textContent || '';
+            const updatedText = currentText.replace(/Running/, 'Stopped');
+            statusElement.innerHTML = `<em>${updatedText}</em>`;
+        }
+        
+        return true; // Return true if a worker was actually stopped
+    }
+    return false; // Return false if no worker was running
+}
+
+// Add a function to check if blaze is running
+export function isBlazeRunning() {
+    return isRunningBlaze;
+}
+
+// Add a function to check if blaze was manually stopped
+export function wasBlazeManuallyStoppped() {
+    return wasManuallyStopped;
 }
 
 export async function tm_blaze(
@@ -375,6 +411,9 @@ export async function tm_blaze(
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
     try {
+        // Set the running state to true
+        isRunningBlaze = true;
+        
         // Save the current parameters for future checks
         lastBlazeParams = {
             machineCode,
@@ -450,6 +489,7 @@ export async function tm_blaze(
                     if (statusElement) {
                         statusElement.innerHTML = `<em>Error: ${event.data.message}</em>`;
                     }
+                    isRunningBlaze = false; // Update running state on error
                     reject(new Error(event.data.message));
                     worker.terminate();
                     if (activeWorker === worker) {
@@ -469,7 +509,12 @@ export async function tm_blaze(
                         const formattedSteps = BigInt(stepsCompleted).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                         
                         // Determine machine state
-                        const machineState = event.data.halted ? 'Halted' : event.data.intermediate ? 'Running' : 'Not Halted';
+                        let machineState;
+                        if (wasManuallyStopped) {
+                            machineState = 'Stopped';
+                        } else {
+                            machineState = event.data.halted ? 'Halted' : event.data.intermediate ? 'Running' : 'Not Halted';
+                        }
                         
                         // Create status text with commas in Ones count
                         const onesCount = event.data.onesCount || 0;
@@ -490,6 +535,7 @@ export async function tm_blaze(
                     
                     // If this is the final result, resolve the promise
                     if (!event.data.intermediate) {
+                        isRunningBlaze = false; // Update running state when done
                         worker.terminate();
                         if (activeWorker === worker) {
                             activeWorker = null;
@@ -498,6 +544,7 @@ export async function tm_blaze(
                     }
                 } catch (error) {
                     if (!event.data.intermediate) {
+                        isRunningBlaze = false; // Update running state on error
                         worker.terminate();
                         if (activeWorker === worker) {
                             activeWorker = null;
@@ -511,6 +558,7 @@ export async function tm_blaze(
                 if (statusElement) {
                     statusElement.innerHTML = `<em>Error: ${error.message}</em>`;
                 }
+                isRunningBlaze = false; // Update running state on error
                 reject(error);
                 worker.terminate();
                 if (activeWorker === worker) {
@@ -530,6 +578,7 @@ export async function tm_blaze(
         // Wait for the worker to finish
         await promise;
     } catch (error) {
+        isRunningBlaze = false; // Update running state on error
         console.error("Error in tm_blaze:", error);
         throw error;
     }
