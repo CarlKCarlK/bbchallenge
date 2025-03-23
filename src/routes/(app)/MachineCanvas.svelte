@@ -91,6 +91,16 @@
             console.log('Forcing re-run of blaze visualization');
             // Clear the Blaze cache to force a new render
             clearBlazeCache();
+            
+            // Find and update the status element to immediately show "Running"
+            const statusElement = document.getElementById('tm-blaze-status');
+            if (statusElement) {
+                const currentText = statusElement.textContent || '';
+                // Replace "Stopped" with "Running" in the status text
+                const updatedText = currentText.replace(/Stopped/, 'Running');
+                statusElement.innerHTML = `<em>${updatedText}</em>`;
+            }
+            
             if (canvas) {
                 // Force immediate redraw
                 draw();
