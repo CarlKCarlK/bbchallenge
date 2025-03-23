@@ -444,7 +444,6 @@ export async function tm_blaze(
         const startTime = performance.now();
 
         // Create or find status element if not provided
-        let autoCreatedStatusElement = false;
         if (!statusElement) {
             // Try to find an existing status element with our special ID
             const existingStatusElement = document.getElementById('tm-blaze-status');
@@ -466,7 +465,7 @@ export async function tm_blaze(
                 statusElement.style.padding = '1px';
                 
                 // Try to find the parent container of the canvas
-                let canvasParent = ctx.canvas.parentElement;
+                const canvasParent = ctx.canvas.parentElement;
                 
                 // Insert the status element before the canvas
                 if (canvasParent) {
@@ -476,7 +475,6 @@ export async function tm_blaze(
                     ctx.canvas.parentNode?.insertBefore(statusElement, ctx.canvas);
                 }
                 
-                autoCreatedStatusElement = true;
             }
         }
 
