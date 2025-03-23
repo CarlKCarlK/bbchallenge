@@ -191,6 +191,11 @@ export function tm_explore(
 	initial_tape = '0',
 	height = 1000
 ) {
+	// Stop any active Blaze worker before starting the explore mode
+	if (isBlazeRunning()) {
+		stopBlazeWorker();
+	}
+
 	// Hide any existing status element from blaze mode
 	const statusElement = document.getElementById('tm-blaze-status');
 	if (statusElement) {
@@ -599,6 +604,11 @@ export function tm_trace_to_image(
 	fitCanvas = true,
 	showHeadMove = false
 ) {
+	// Stop any active Blaze worker before starting the trace mode
+	if (isBlazeRunning()) {
+		stopBlazeWorker();
+	}
+
 	// Hide any existing status element from blaze mode
 	const statusElement = document.getElementById('tm-blaze-status');
 	if (statusElement) {
